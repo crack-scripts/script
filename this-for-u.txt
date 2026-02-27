@@ -51,18 +51,33 @@ getgenv().WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Fo
 getgenv().WindUI:AddTheme({
     Name = "samrat-theme",
 
-    Accent = Color3.fromHex("#b91c1c"),
-    Background = Color3.fromHex("#1a0000"),
+    Accent = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#dc2626"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#7f1d1d"), Transparency = 0 },
+    }, { Rotation = 90 }),
+
+    Background = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#1a0000"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#0d0000"), Transparency = 0 },
+    }, { Rotation = 90 }),
+
     BackgroundTransparency = 0,
     Outline = Color3.fromHex("#ef4444"),
     Text = Color3.fromHex("#ffffff"),
     Placeholder = Color3.fromHex("#9ca3af"),
-    Button = Color3.fromHex("#dc2626"),
-    Icon = Color3.fromHex("#fca5a5"),
 
+    Button = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#ef4444"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#b91c1c"), Transparency = 0 },
+    }, { Rotation = 90 }),
+
+    Icon = Color3.fromHex("#fca5a5"),
     Hover = Color3.fromHex("#ffffff"),
 
-    WindowBackground = Color3.fromHex("1a0000"),
+    WindowBackground = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#1a0000"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#0d0000"), Transparency = 0 },
+    }, { Rotation = 90 }),
     WindowShadow = Color3.fromHex("000000"),
 
     DialogBackground = Color3.fromHex("#1a0000"),
@@ -76,11 +91,17 @@ getgenv().WindUI:AddTheme({
     WindowTopbarAuthor = Color3.fromHex("fca5a5"),
     WindowTopbarIcon = Color3.fromHex("ffffff"),
 
-    TabBackground = Color3.fromHex("#b91c1c"),
+    TabBackground = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#b91c1c"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#7f1d1d"), Transparency = 0 },
+    }, { Rotation = 90 }),
     TabTitle = Color3.fromHex("#ffffff"),
     TabIcon = Color3.fromHex("fca5a5"),
 
-    ElementBackground = Color3.fromHex("#7f1d1d"),
+    ElementBackground = getgenv().WindUI:Gradient({
+        ["0"]   = { Color = Color3.fromHex("#3f0000"), Transparency = 0 },
+        ["100"] = { Color = Color3.fromHex("#1a0000"), Transparency = 0 },
+    }, { Rotation = 90 }),
     ElementTitle = Color3.fromHex("#ffffff"),
     ElementDesc = Color3.fromHex("#fca5a5"),
     ElementIcon = Color3.fromHex("#fca5a5"),
