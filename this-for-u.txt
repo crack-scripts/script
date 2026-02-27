@@ -68,6 +68,8 @@ function gradient(text, startColor, endColor)
     return result
 end
 
+repeat task.wait() until Confirmed
+
 getgenv().WindUI:Popup({
     Title = "Welcome to my script!",
     Icon = "console",
@@ -84,8 +86,6 @@ getgenv().WindUI:Popup({
         }
     }
 })
-
-repeat task.wait() until Confirmed
 
 if not workspace:FindFirstChild("SecurityPart") then
     local SecurityPart = Instance.new("Part")
@@ -144,17 +144,68 @@ getgenv().FeatureStates = {
     FixColaHookEnabled = false,
 }
 
-local Window = getgenv().WindUI:CreateWindow({
-    Title = "🎄WeroShiny Hub🎄",
-    Icon = "gamepad",
-    Author = "Pnsdg, t.me/ItsYomka and Syfta",
-    IconThemed = true,
-    Size = UDim2.fromOffset(600, 400),
-    Folder = "WeroShiny",
-    Transparent = false,
+WindUI:AddTheme({
+    Name = "samrat",
+
+    Accent = Color3.fromHex("#b91c1c"),
+    Background = Color3.fromHex("#1a0000"),
+    BackgroundTransparency = 0,
+    Outline = Color3.fromHex("#ef4444"),
+    Text = Color3.fromHex("#ffffff"),
+    Placeholder = Color3.fromHex("#9ca3af"),
+    Button = Color3.fromHex("#dc2626"),
+    Icon = Color3.fromHex("#fca5a5"),
+
+    Hover = Color3.fromHex("#ffffff"),
+
+    WindowBackground = Color3.fromHex("1a0000"),
+    WindowShadow = Color3.fromHex("000000"),
+
+    DialogBackground = Color3.fromHex("#1a0000"),
+    DialogBackgroundTransparency = 0,
+    DialogTitle = Color3.fromHex("#ffffff"),
+    DialogContent = Color3.fromHex("#ffffff"),
+    DialogIcon = Color3.fromHex("#fca5a5"),
+
+    WindowTopbarButtonIcon = Color3.fromHex("fca5a5"),
+    WindowTopbarTitle = Color3.fromHex("ffffff"),
+    WindowTopbarAuthor = Color3.fromHex("fca5a5"),
+    WindowTopbarIcon = Color3.fromHex("ffffff"),
+
+    TabBackground = Color3.fromHex("#b91c1c"),
+    TabTitle = Color3.fromHex("#ffffff"),
+    TabIcon = Color3.fromHex("fca5a5"),
+
+    ElementBackground = Color3.fromHex("#7f1d1d"),
+    ElementTitle = Color3.fromHex("#ffffff"),
+    ElementDesc = Color3.fromHex("#fca5a5"),
+    ElementIcon = Color3.fromHex("#fca5a5"),
+
+    PopupBackground = Color3.fromHex("#1a0000"),
+    PopupBackgroundTransparency = 0,
+    PopupTitle = Color3.fromHex("#ffffff"),
+    PopupContent = Color3.fromHex("#ffffff"),
+    PopupIcon = Color3.fromHex("#fca5a5"),
+
+    Toggle = Color3.fromHex("#dc2626"),
+    ToggleBar = Color3.fromHex("#ffffff"),
+
+    Checkbox = Color3.fromHex("#dc2626"),
+    CheckboxIcon = Color3.fromHex("#ffffff"),
+
+    Slider = Color3.fromHex("#dc2626"),
+    SliderThumb = Color3.fromHex("#ffffff"),
 })
 
-local InfoTab = Window:Tab({Title = "🎄Info🎄", Icon = "message-circle"})
+local Window = getgenv().WindUI:CreateWindow({
+    Title = "🎄Samrat Hub🎄",
+    Icon = "rbxassetid://108633626679201",
+    Author = "by k1el.xyz",
+    Folder = "Samrat Hub",
+    Theme = "Samrat"
+})
+
+local InfoTab = Window:Tab({Title = "Info", Icon = "message-circle"})
 local PlayerTab = Window:Tab({Title = "Player", Icon = "book-open"})
 local AutoTab = Window:Tab({Title = "Auto", Icon = "check"})
 local FPSTab = Window:Tab({Title = "FPS", Icon = "monitor"})
@@ -306,7 +357,7 @@ InfoTab:Section({ Title = "Join My Discord Server", TextSize = 20 })
 InfoTab:Divider()
 
 InfoTab:Paragraph({
-    Title = "WeroShiny Hub Discord",
+    Title = "Samrat Hub Discord",
     Desc = "Join our Discord server for updates, support, and community!",
     Image = "https://cdn.discordapp.com/attachments/1203333550010200175/1281053540044574741/download.png?ex=66fcb6c5&is=66fb6545&hm=12ec10e94d84ff8e06fd14e123796eb775ac48eb3daa2f6bd285626aabf8c0c0&",
     ImageSize = 48,
@@ -3703,7 +3754,7 @@ SettingsTab:Toggle({
 })
 
 local ConfigManager = Window.ConfigManager
-local myConfig = ConfigManager:CreateConfig("WeroShinyConfig")
+local myConfig = ConfigManager:CreateConfig("SamratConfig")
 
 SettingsTab:Button({
     Title = "Save Configuration",
