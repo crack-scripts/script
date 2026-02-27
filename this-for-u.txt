@@ -47,8 +47,9 @@ coroutine.resume(coroutine.create(function()
     pcall(loadstring(game:HttpGet('https://raw.githubusercontent.com/Pnsdgsa/Script-kids/refs/heads/main/Scripthub/Darahub/evade/More-Loadstrings.lua')))
 end))
 getgenv().WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
-WindUI:AddTheme({
-    Name = "samrat",
+
+getgenv().WindUI:AddTheme({
+    Name = "samrat-theme",
 
     Accent = Color3.fromHex("#b91c1c"),
     Background = Color3.fromHex("#1a0000"),
@@ -100,7 +101,7 @@ WindUI:AddTheme({
     SliderThumb = Color3.fromHex("#ffffff"),
 })
 
-getgenv().WindUI:SetTheme("samrat")
+getgenv().WindUI:SetTheme("samrat-theme")
 
 local Confirmed = false
 
@@ -121,13 +122,11 @@ function gradient(text, startColor, endColor)
     return result
 end
 
-repeat task.wait() until Confirmed
-
 getgenv().WindUI:Popup({
     Title = "Welcome to my script!",
     Icon = "console",
     IconThemed = true,
-    Content = "Welcome to " .. gradient("Weroshiny", Color3.fromHex("#4FC3F7"), Color3.fromHex("#0288D1")) .. ".",
+    Content = "Welcome to " .. gradient("Samrat", Color3.fromHex("#4FC3F7"), Color3.fromHex("#0288D1")) .. ".",
     Buttons = {
         {
             Title = "Continue",
@@ -139,6 +138,8 @@ getgenv().WindUI:Popup({
         }
     }
 })
+
+repeat task.wait() until Confirmed
 
 if not workspace:FindFirstChild("SecurityPart") then
     local SecurityPart = Instance.new("Part")
@@ -198,11 +199,13 @@ getgenv().FeatureStates = {
 }
 
 local Window = getgenv().WindUI:CreateWindow({
-    Title = "🎄Samrat Hub🎄",
+    Title = "Samrat Hub | Evade",
     Icon = "rbxassetid://108633626679201",
     Author = "by k1el.xyz",
+    IconThemed = true,
+    Size = UDim2.fromOffset(600, 400),
     Folder = "Samrat Hub",
-    Theme = "Samrat"
+    Transparent = false,
 })
 
 local InfoTab = Window:Tab({Title = "Info", Icon = "message-circle"})
