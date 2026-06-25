@@ -3493,20 +3493,44 @@ NatHub_MODULES[NatHub["3e"]] = {
                         Thumbnail = data.Thumbnail or nil,   -- top banner (full width)
                         ThumbnailSize = data.ThumbnailSize or 80,
                         Buttons   = data.Buttons   or nil,   -- { {Title, Icon, Callback} }
+                        Color     = data.Color     or nil,   -- Color3 accent tint
+                        Tags      = data.Tags      or nil,   -- { "New", {Text="Beta", Color=Color3...} }
+                        Locked    = data.Locked    or false,
                     }
-                
+
+                    local function BlendColor(base, tint, alpha)
+                        return Color3.new(
+                            base.R + (tint.R - base.R) * alpha,
+                            base.G + (tint.G - base.G) * alpha,
+                            base.B + (tint.B - base.B) * alpha
+                        )
+                    end
+
                     local newParagraph = Templates.Paragraph:Clone()
                     newParagraph.Name   = Paragraph.Title
                     newParagraph.Parent = parentElement
-                
+
+                    -- ── Resting (default) colors — shifted if Color is set ────────────
+                    local restingBg     = Color3.fromRGB(43, 46, 53)
+                    local restingStroke = Color3.fromRGB(61, 61, 75)
+
+                    if Paragraph.Color then
+                        restingBg     = BlendColor(restingBg, Paragraph.Color, 0.18)
+                        restingStroke = BlendColor(restingStroke, Paragraph.Color, 0.4)
+                        newParagraph.BackgroundColor3 = restingBg
+                        newParagraph.UIStroke.Color   = restingStroke
+                    end
+
                     -- ── Thumbnail (top banner, LayoutOrder = -2) ──────────────────────
-                    if Paragraph.Thumbnail then
-                        local thumb = Instance.new("ImageLabel")
+                    local thumb
+                    local function buildThumbnail(image, size)
+                        if thumb then thumb:Destroy() end
+                        thumb = Instance.new("ImageLabel")
                         thumb.Name                  = "Thumbnail"
                         thumb.BackgroundTransparency = 1
                         thumb.BorderSizePixel       = 0
-                        thumb.Size                  = UDim2.new(1, 0, 0, Paragraph.ThumbnailSize)
-                        thumb.Image                 = Paragraph.Thumbnail
+                        thumb.Size                  = UDim2.new(1, 0, 0, size)
+                        thumb.Image                 = image
                         thumb.ScaleType             = Enum.ScaleType.Crop
                         thumb.LayoutOrder           = -2
                         thumb.Parent                = newParagraph
@@ -3514,12 +3538,16 @@ NatHub_MODULES[NatHub["3e"]] = {
                         c.CornerRadius = UDim.new(0, 4)
                         c.Parent = thumb
                     end
-                
+
+                    if Paragraph.Thumbnail then
+                        buildThumbnail(Paragraph.Thumbnail, Paragraph.ThumbnailSize)
+                    end
+
                     -- ── Title row — image on side if Image provided (LayoutOrder = -1) ─
                     if Paragraph.Image then
                         -- hide the original flat title
                         newParagraph.Title.Visible = false
-                
+
                         local titleRow = Instance.new("Frame")
                         titleRow.Name               = "TitleRow"
                         titleRow.BackgroundTransparency = 1
@@ -3528,13 +3556,13 @@ NatHub_MODULES[NatHub["3e"]] = {
                         titleRow.AutomaticSize      = Enum.AutomaticSize.Y
                         titleRow.LayoutOrder        = -1
                         titleRow.Parent             = newParagraph
-                
+
                         local rowLayout = Instance.new("UIListLayout")
                         rowLayout.FillDirection       = Enum.FillDirection.Horizontal
                         rowLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
                         rowLayout.Padding             = UDim.new(0, 8)
                         rowLayout.Parent              = titleRow
-                
+
                         local icon = Instance.new("ImageLabel")
                         icon.Name                   = "Icon"
                         icon.BackgroundTransparency = 1
@@ -3542,11 +3570,14 @@ NatHub_MODULES[NatHub["3e"]] = {
                         icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
                         icon.Image                  = Paragraph.Image
                         icon.ScaleType              = Enum.ScaleType.Fit
+                        if Paragraph.Color then
+                            icon.ImageColor3 = Paragraph.Color
+                        end
                         icon.Parent                 = titleRow
                         local ic = Instance.new("UICorner")
                         ic.CornerRadius = UDim.new(0, 4)
                         ic.Parent = icon
-                
+
                         local titleLabel = Instance.new("TextLabel")
                         titleLabel.Name                 = "TitleText"
                         titleLabel.BackgroundTransparency = 1
@@ -3567,18 +3598,81 @@ NatHub_MODULES[NatHub["3e"]] = {
                         newParagraph.Title.RichText = Paragraph.RichText
                         newParagraph.Title.LayoutOrder = -1
                     end
-                
-                    -- ── Description (LayoutOrder = 0) ─────────────────────────────────
+
+                    -- ── Tags (small chip labels, LayoutOrder = 0) ─────────────────────
+                    local tagsRow
+                    local function buildTags(tags)
+                        if tagsRow then
+                            tagsRow:Destroy()
+                            tagsRow = nil
+                        end
+                        if not tags or #tags == 0 then return end
+
+                        tagsRow = Instance.new("Frame")
+                        tagsRow.Name               = "Tags"
+                        tagsRow.BackgroundTransparency = 1
+                        tagsRow.BorderSizePixel    = 0
+                        tagsRow.Size               = UDim2.new(1, 0, 0, 20)
+                        tagsRow.AutomaticSize      = Enum.AutomaticSize.Y
+                        tagsRow.LayoutOrder        = 0
+                        tagsRow.Parent             = newParagraph
+
+                        local tagLayout = Instance.new("UIListLayout")
+                        tagLayout.FillDirection       = Enum.FillDirection.Horizontal
+                        tagLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+                        tagLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+                        tagLayout.Padding             = UDim.new(0, 6)
+                        tagLayout.Parent              = tagsRow
+
+                        for _, tagData in ipairs(tags) do
+                            local tagText  = type(tagData) == "table" and tagData.Text  or tagData
+                            local tagColor = type(tagData) == "table" and tagData.Color or nil
+
+                            local chip = Instance.new("Frame")
+                            chip.Name             = "Tag"
+                            chip.BackgroundColor3 = tagColor or Color3.fromRGB(55, 59, 68)
+                            chip.BorderSizePixel  = 0
+                            chip.AutomaticSize    = Enum.AutomaticSize.X
+                            chip.Size             = UDim2.new(0, 0, 0, 20)
+                            chip.Parent           = tagsRow
+
+                            local cc = Instance.new("UICorner")
+                            cc.CornerRadius = UDim.new(0, 5)
+                            cc.Parent = chip
+                            local cs = Instance.new("UIStroke")
+                            cs.Color           = Color3.fromRGB(61, 61, 75)
+                            cs.Thickness       = 1
+                            cs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            cs.Parent = chip
+                            local cp = Instance.new("UIPadding")
+                            cp.PaddingLeft  = UDim.new(0, 8)
+                            cp.PaddingRight = UDim.new(0, 8)
+                            cp.Parent = chip
+
+                            local cl = Instance.new("TextLabel")
+                            cl.BackgroundTransparency = 1
+                            cl.Size           = UDim2.new(0, 0, 1, 0)
+                            cl.AutomaticSize  = Enum.AutomaticSize.X
+                            cl.Text           = tagText or ""
+                            cl.TextColor3     = Color3.fromRGB(197, 204, 219)
+                            cl.TextSize       = 12
+                            cl.FontFace       = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                            cl.Parent         = chip
+                        end
+                    end
+                    buildTags(Paragraph.Tags)
+
+                    -- ── Description (LayoutOrder = 1) ─────────────────────────────────
                     if Paragraph.Desc and Paragraph.Desc ~= "" then
                         newParagraph.Description.Text     = Paragraph.Desc
                         newParagraph.Description.RichText = Paragraph.RichText
-                        newParagraph.Description.LayoutOrder = 0
+                        newParagraph.Description.LayoutOrder = 1
                         newParagraph.Description.Visible  = true
                     else
                         newParagraph.Description.Visible  = false
                     end
-                
-                    -- ── Buttons row (LayoutOrder = 1) ─────────────────────────────────
+
+                    -- ── Buttons row (LayoutOrder = 2) ──────────────────────────────────
                     if Paragraph.Buttons and #Paragraph.Buttons > 0 then
                         local btnRow = Instance.new("Frame")
                         btnRow.Name               = "ButtonRow"
@@ -3586,21 +3680,21 @@ NatHub_MODULES[NatHub["3e"]] = {
                         btnRow.BorderSizePixel    = 0
                         btnRow.Size               = UDim2.new(1, 0, 0, 30)
                         btnRow.AutomaticSize      = Enum.AutomaticSize.Y
-                        btnRow.LayoutOrder        = 1
+                        btnRow.LayoutOrder        = 2
                         btnRow.Parent             = newParagraph
-                
+
                         local btnLayout = Instance.new("UIListLayout")
                         btnLayout.FillDirection      = Enum.FillDirection.Horizontal
                         btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
                         btnLayout.VerticalAlignment  = Enum.VerticalAlignment.Center
                         btnLayout.Padding            = UDim.new(0, 6)
                         btnLayout.Parent             = btnRow
-                
+
                         local count = #Paragraph.Buttons
                         local gap   = 6
                         local totalGap   = gap * (count - 1)
                         local offsetEach = -math.floor(totalGap / count)
-                
+
                         for i, btnData in ipairs(Paragraph.Buttons) do
                             local btn = Instance.new("TextButton")
                             btn.Name               = btnData.Title or ("Btn"..i)
@@ -3613,7 +3707,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                             btn.FontFace           = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
                             btn.AutoButtonColor    = false
                             btn.Parent             = btnRow
-                
+
                             local bc = Instance.new("UICorner")
                             bc.CornerRadius = UDim.new(0, 5)
                             bc.Parent = btn
@@ -3622,7 +3716,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                             bs.Thickness = 1
                             bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                             bs.Parent = btn
-                
+
                             btn.MouseEnter:Connect(function()
                                 Tween(btn, {BackgroundColor3 = Color3.fromRGB(65, 70, 82)}, TweenConfigs.Global)
                             end)
@@ -3630,13 +3724,67 @@ NatHub_MODULES[NatHub["3e"]] = {
                                 Tween(btn, {BackgroundColor3 = Color3.fromRGB(55, 59, 68)}, TweenConfigs.Global)
                             end)
                             btn.MouseButton1Click:Connect(function()
-                                if btnData.Callback then btnData.Callback() end
+                                if not Paragraph.Locked and btnData.Callback then btnData.Callback() end
                             end)
                         end
                     end
-                
+
+                    -- ── Lock overlay (dims card + blocks clicks underneath) ────────────
+                    local lockOverlay = Instance.new("TextButton")
+                    lockOverlay.Name                   = "LockOverlay"
+                    lockOverlay.Text                    = ""
+                    lockOverlay.AutoButtonColor         = false
+                    lockOverlay.BackgroundColor3        = Color3.fromRGB(20, 21, 25)
+                    lockOverlay.BackgroundTransparency  = 0.45
+                    lockOverlay.BorderSizePixel         = 0
+                    lockOverlay.Size                    = UDim2.new(1, 0, 1, 0)
+                    lockOverlay.ZIndex                  = 5
+                    lockOverlay.Visible                 = false
+                    lockOverlay.Parent                  = newParagraph
+
+                    local locC = Instance.new("UICorner")
+                    locC.CornerRadius = UDim.new(0, 6)
+                    locC.Parent = lockOverlay
+
+                    local lockLayout = Instance.new("UIListLayout")
+                    lockLayout.FillDirection       = Enum.FillDirection.Horizontal
+                    lockLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                    lockLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+                    lockLayout.Padding             = UDim.new(0, 6)
+                    lockLayout.Parent              = lockOverlay
+
+                    local lockIcon = Instance.new("ImageLabel")
+                    lockIcon.Name               = "LockIcon"
+                    lockIcon.BackgroundTransparency = 1
+                    lockIcon.Size               = UDim2.new(0, 16, 0, 16)
+                    lockIcon.ZIndex             = 6
+                    local lockIconData = IconModule.Icon("lock")
+                    if lockIconData then
+                        lockIcon.Image           = lockIconData[1]
+                        lockIcon.ImageRectOffset = lockIconData[2].ImageRectPosition
+                        lockIcon.ImageRectSize   = lockIconData[2].ImageRectSize
+                    end
+                    lockIcon.ImageColor3        = Color3.fromRGB(197, 204, 219)
+                    lockIcon.Parent             = lockOverlay
+
+                    local lockLabel = Instance.new("TextLabel")
+                    lockLabel.Name              = "LockText"
+                    lockLabel.BackgroundTransparency = 1
+                    lockLabel.AutomaticSize     = Enum.AutomaticSize.X
+                    lockLabel.Size              = UDim2.new(0, 0, 0, 16)
+                    lockLabel.Text              = "Locked"
+                    lockLabel.TextColor3        = Color3.fromRGB(197, 204, 219)
+                    lockLabel.TextSize          = 13
+                    lockLabel.ZIndex            = 6
+                    lockLabel.FontFace          = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                    lockLabel.Parent            = lockOverlay
+
+                    if Paragraph.Locked then
+                        lockOverlay.Visible = true
+                    end
+
                     newParagraph.Visible = true
-                
+
                     -- ── Methods ───────────────────────────────────────────────────────
                     function Paragraph:SetTitle(t)
                         Paragraph.Title = t
@@ -3648,13 +3796,13 @@ NatHub_MODULES[NatHub["3e"]] = {
                             newParagraph.Title.Text = t
                         end
                     end
-                
+
                     function Paragraph:SetDesc(d)
                         Paragraph.Desc = d
                         newParagraph.Description.Text    = d
                         newParagraph.Description.Visible = d ~= ""
                     end
-                
+
                     function Paragraph:SetImage(img)
                         local row = newParagraph:FindFirstChild("TitleRow")
                         if row then
@@ -3662,11 +3810,47 @@ NatHub_MODULES[NatHub["3e"]] = {
                             if ic then ic.Image = img end
                         end
                     end
-                
+
+                    function Paragraph:SetThumbnail(img, size)
+                        Paragraph.Thumbnail = img
+                        if size then Paragraph.ThumbnailSize = size end
+                        if img then
+                            buildThumbnail(img, Paragraph.ThumbnailSize)
+                        elseif thumb then
+                            thumb:Destroy()
+                            thumb = nil
+                        end
+                    end
+
+                    function Paragraph:SetTags(tags)
+                        Paragraph.Tags = tags
+                        buildTags(tags)
+                    end
+
+                    function Paragraph:Lock(reason)
+                        Paragraph.Locked    = true
+                        lockLabel.Text      = reason or "Locked"
+                        lockOverlay.Visible = true
+                    end
+
+                    function Paragraph:Unlock()
+                        Paragraph.Locked    = false
+                        lockOverlay.Visible = false
+                    end
+
+                    function Paragraph:Highlight()
+                        Tween(newParagraph, {BackgroundColor3 = Color3.fromRGB(58, 63, 74)}, TweenConfigs.Notification)
+                        Tween(newParagraph.UIStroke, {Color = Color3.fromRGB(120, 170, 255), Thickness = 2}, TweenConfigs.Notification)
+                        task.delay(TweenConfigs.Notification.Duration, function()
+                            Tween(newParagraph, {BackgroundColor3 = restingBg}, TweenConfigs.Global)
+                            Tween(newParagraph.UIStroke, {Color = restingStroke, Thickness = 1.5}, TweenConfigs.Global)
+                        end)
+                    end
+
                     function Paragraph:Destroy()
                         newParagraph:Destroy()
                     end
-                
+
                     return Paragraph
                 end
                 
@@ -3692,11 +3876,19 @@ NatHub_MODULES[NatHub["3e"]] = {
                     layout.Parent               = hFrame
                 
                     -- rebalance child widths evenly after each element is added
+                    -- Dividers are excluded from the split — they keep their fixed
+                    -- pixel width and that width is reserved out of the total instead.
                     local function rebalance()
                         local children = {}
+                        local reserved  = 0
+
                         for _, v in ipairs(hFrame:GetChildren()) do
                             if v:IsA("GuiObject") then
-                                table.insert(children, v)
+                                if v.Name == "Divider" then
+                                    reserved = reserved + math.max(v.Size.X.Offset, 1)
+                                else
+                                    table.insert(children, v)
+                                end
                             end
                         end
                 
@@ -3705,10 +3897,16 @@ NatHub_MODULES[NatHub["3e"]] = {
                 
                         local totalGap   = gap * (count - 1)
                         local scaleEach  = 1 / count
-                        local offsetEach = -math.floor(totalGap / count)
+                        local available  = -(totalGap + reserved)
+                        local baseOffset = math.floor(available / count)
+                        local remainder  = available - (baseOffset * count)
                 
-                        for _, v in ipairs(children) do
-                            v.Size = UDim2.new(scaleEach, offsetEach, 0, v.Size.Y.Offset)
+                        for i, v in ipairs(children) do
+                            local offset = baseOffset
+                            if i <= math.abs(remainder) then
+                                offset = offset - 1
+                            end
+                            v.Size = UDim2.new(scaleEach, offset, 0, v.Size.Y.Offset)
                             -- preserve original Y / AutomaticSize
                             v.AutomaticSize = Enum.AutomaticSize.Y
                         end
@@ -3786,7 +3984,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Stack:Divider()
                         local div = Templates.Divider:Clone()
                         div.Size    = UDim2.new(1, 0, 0, 1)
-                        div.Parent  = hFrame
+                        div.Parent  = vFrame
                         div.Visible = true
                     end
                     
