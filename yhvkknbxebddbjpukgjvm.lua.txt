@@ -3505,6 +3505,41 @@ NatHub_MODULES[NatHub["3e"]] = {
                             base.B + (tint.B - base.B) * alpha
                         )
                     end
+                    
+                    local function LoadImage(url)
+                        if typeof(url) ~= "string" or not url:match("^https?://") then
+                            return url -- already rbxassetid / icon-name / nil — nothing to do
+                        end
+
+                        if not (writefile and isfile and getcustomasset) then
+                            return url -- executor has no filesystem access, can't cache externally
+                        end
+
+                        local ok, result = pcall(function()
+                            local folder = "NatHub/ImageCache"
+                            if makefolder then pcall(makefolder, folder) end
+
+                            local hash = 0
+                            for i = 1, #url do
+                                hash = (hash * 31 + string.byte(url, i)) % 2147483647
+                            end
+                            local path = folder .. "/" .. tostring(hash) .. ".png"
+
+                            if not isfile(path) then
+                                local httpFunc = (syn and syn.request) or request or http_request or (http and http.request)
+                                if not httpFunc then return url end
+
+                                local response = httpFunc({ Url = url, Method = "GET" })
+                                if not (response and response.Body) then return url end
+
+                                writefile(path, response.Body)
+                            end
+
+                            return getcustomasset(path)
+                        end)
+
+                        return (ok and result) or url
+                    end
 
                     local newParagraph = Templates.Paragraph:Clone()
                     newParagraph.Name   = Paragraph.Title
