@@ -3485,71 +3485,181 @@ NatHub_MODULES[NatHub["3e"]] = {
 
                 function Tab:Paragraph(data)
                     local Paragraph = {
-                        Title    = data.Title,
-                        Desc     = data.Desc,
-                        RichText = data.RichText or false,
-                        Image    = data.Image or nil,        -- rbxassetid:// string
-                        ImageSize = data.ImageSize or 80,    -- pixel height for the image
+                        Title     = data.Title,
+                        Desc      = data.Desc,
+                        RichText  = data.RichText  or false,
+                        Image     = data.Image     or nil,   -- side icon (beside title)
+                        ImageSize = data.ImageSize or 36,
+                        Thumbnail = data.Thumbnail or nil,   -- top banner (full width)
+                        ThumbnailSize = data.ThumbnailSize or 80,
+                        Buttons   = data.Buttons   or nil,   -- { {Title, Icon, Callback} }
                     }
                 
                     local newParagraph = Templates.Paragraph:Clone()
                     newParagraph.Name   = Paragraph.Title
                     newParagraph.Parent = parentElement
                 
-                    -- Image block (full-width, above title)
+                    -- ── Thumbnail (top banner, LayoutOrder = -2) ──────────────────────
+                    if Paragraph.Thumbnail then
+                        local thumb = Instance.new("ImageLabel")
+                        thumb.Name                  = "Thumbnail"
+                        thumb.BackgroundTransparency = 1
+                        thumb.BorderSizePixel       = 0
+                        thumb.Size                  = UDim2.new(1, 0, 0, Paragraph.ThumbnailSize)
+                        thumb.Image                 = Paragraph.Thumbnail
+                        thumb.ScaleType             = Enum.ScaleType.Crop
+                        thumb.LayoutOrder           = -2
+                        thumb.Parent                = newParagraph
+                        local c = Instance.new("UICorner")
+                        c.CornerRadius = UDim.new(0, 4)
+                        c.Parent = thumb
+                    end
+                
+                    -- ── Title row — image on side if Image provided (LayoutOrder = -1) ─
                     if Paragraph.Image then
-                        local imgLabel = Instance.new("ImageLabel")
-                        imgLabel.Name                = "Image"
-                        imgLabel.BackgroundTransparency = 1
-                        imgLabel.BorderSizePixel     = 0
-                        imgLabel.Size                = UDim2.new(1, 0, 0, Paragraph.ImageSize)
-                        imgLabel.Image               = Paragraph.Image
-                        imgLabel.ScaleType           = Enum.ScaleType.Crop
-                        imgLabel.LayoutOrder         = -1  -- renders above Title in UIListLayout
-                        imgLabel.Parent              = newParagraph
+                        -- hide the original flat title
+                        newParagraph.Title.Visible = false
                 
-                        -- match the paragraph corner radius
-                        local corner = Instance.new("UICorner")
-                        corner.CornerRadius = UDim.new(0, 4)
-                        corner.Parent = imgLabel
-                    end
+                        local titleRow = Instance.new("Frame")
+                        titleRow.Name               = "TitleRow"
+                        titleRow.BackgroundTransparency = 1
+                        titleRow.BorderSizePixel    = 0
+                        titleRow.Size               = UDim2.new(1, 0, 0, Paragraph.ImageSize)
+                        titleRow.AutomaticSize      = Enum.AutomaticSize.Y
+                        titleRow.LayoutOrder        = -1
+                        titleRow.Parent             = newParagraph
                 
-                    newParagraph.Title.Text = Paragraph.Title
+                        local rowLayout = Instance.new("UIListLayout")
+                        rowLayout.FillDirection       = Enum.FillDirection.Horizontal
+                        rowLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+                        rowLayout.Padding             = UDim.new(0, 8)
+                        rowLayout.Parent              = titleRow
                 
-                    if Paragraph.Desc and Paragraph.Desc ~= "" then
-                        newParagraph.Description.Text    = Paragraph.Desc
-                        newParagraph.Description.Visible = true
+                        local icon = Instance.new("ImageLabel")
+                        icon.Name                   = "Icon"
+                        icon.BackgroundTransparency = 1
+                        icon.BorderSizePixel        = 0
+                        icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
+                        icon.Image                  = Paragraph.Image
+                        icon.ScaleType              = Enum.ScaleType.Fit
+                        icon.Parent                 = titleRow
+                        local ic = Instance.new("UICorner")
+                        ic.CornerRadius = UDim.new(0, 4)
+                        ic.Parent = icon
+                
+                        local titleLabel = Instance.new("TextLabel")
+                        titleLabel.Name                 = "TitleText"
+                        titleLabel.BackgroundTransparency = 1
+                        titleLabel.BorderSizePixel      = 0
+                        titleLabel.Size                 = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
+                        titleLabel.AutomaticSize        = Enum.AutomaticSize.Y
+                        titleLabel.Text                 = Paragraph.Title
+                        titleLabel.TextXAlignment       = Enum.TextXAlignment.Left
+                        titleLabel.TextWrapped          = true
+                        titleLabel.RichText             = Paragraph.RichText
+                        titleLabel.TextSize             = 16
+                        titleLabel.TextColor3          = Color3.fromRGB(197, 204, 219)
+                        titleLabel.FontFace             = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+                        titleLabel.Parent               = titleRow
                     else
-                        newParagraph.Description.Visible = false
+                        newParagraph.Title.Visible  = true
+                        newParagraph.Title.Text     = Paragraph.Title
+                        newParagraph.Title.RichText = Paragraph.RichText
+                        newParagraph.Title.LayoutOrder = -1
                     end
                 
-                    newParagraph.Title.RichText       = Paragraph.RichText
-                    newParagraph.Description.RichText = Paragraph.RichText
-                
-                    newParagraph.Visible = true
-                
-                    function Paragraph:SetTitle(title)
-                        Paragraph.Title = title
-                        newParagraph.Title.Text = title
+                    -- ── Description (LayoutOrder = 0) ─────────────────────────────────
+                    if Paragraph.Desc and Paragraph.Desc ~= "" then
+                        newParagraph.Description.Text     = Paragraph.Desc
+                        newParagraph.Description.RichText = Paragraph.RichText
+                        newParagraph.Description.LayoutOrder = 0
+                        newParagraph.Description.Visible  = true
+                    else
+                        newParagraph.Description.Visible  = false
                     end
                 
-                    function Paragraph:SetDesc(desc)
-                        Paragraph.Desc = desc
-                        newParagraph.Description.Text = desc
-                        if desc ~= "" then
-                            newParagraph.Visible = true
-                        else
-                            newParagraph.Visible = false
+                    -- ── Buttons row (LayoutOrder = 1) ─────────────────────────────────
+                    if Paragraph.Buttons and #Paragraph.Buttons > 0 then
+                        local btnRow = Instance.new("Frame")
+                        btnRow.Name               = "ButtonRow"
+                        btnRow.BackgroundTransparency = 1
+                        btnRow.BorderSizePixel    = 0
+                        btnRow.Size               = UDim2.new(1, 0, 0, 30)
+                        btnRow.AutomaticSize      = Enum.AutomaticSize.Y
+                        btnRow.LayoutOrder        = 1
+                        btnRow.Parent             = newParagraph
+                
+                        local btnLayout = Instance.new("UIListLayout")
+                        btnLayout.FillDirection      = Enum.FillDirection.Horizontal
+                        btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+                        btnLayout.VerticalAlignment  = Enum.VerticalAlignment.Center
+                        btnLayout.Padding            = UDim.new(0, 6)
+                        btnLayout.Parent             = btnRow
+                
+                        local count = #Paragraph.Buttons
+                        local gap   = 6
+                        local totalGap   = gap * (count - 1)
+                        local offsetEach = -math.floor(totalGap / count)
+                
+                        for i, btnData in ipairs(Paragraph.Buttons) do
+                            local btn = Instance.new("TextButton")
+                            btn.Name               = btnData.Title or ("Btn"..i)
+                            btn.BackgroundColor3   = Color3.fromRGB(55, 59, 68)
+                            btn.BorderSizePixel    = 0
+                            btn.Size               = UDim2.new(1/count, offsetEach, 0, 28)
+                            btn.Text               = btnData.Title or ""
+                            btn.TextColor3         = Color3.fromRGB(197, 204, 219)
+                            btn.TextSize           = 13
+                            btn.FontFace           = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                            btn.AutoButtonColor    = false
+                            btn.Parent             = btnRow
+                
+                            local bc = Instance.new("UICorner")
+                            bc.CornerRadius = UDim.new(0, 5)
+                            bc.Parent = btn
+                            local bs = Instance.new("UIStroke")
+                            bs.Color     = Color3.fromRGB(61, 61, 75)
+                            bs.Thickness = 1
+                            bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            bs.Parent = btn
+                
+                            btn.MouseEnter:Connect(function()
+                                Tween(btn, {BackgroundColor3 = Color3.fromRGB(65, 70, 82)}, TweenConfigs.Global)
+                            end)
+                            btn.MouseLeave:Connect(function()
+                                Tween(btn, {BackgroundColor3 = Color3.fromRGB(55, 59, 68)}, TweenConfigs.Global)
+                            end)
+                            btn.MouseButton1Click:Connect(function()
+                                if btnData.Callback then btnData.Callback() end
+                            end)
                         end
                     end
                 
-                    function Paragraph:SetImage(image, size)
-                        local existing = newParagraph:FindFirstChild("Image")
-                        if existing then
-                            existing.Image = image
-                            if size then
-                                existing.Size = UDim2.new(1, 0, 0, size)
-                            end
+                    newParagraph.Visible = true
+                
+                    -- ── Methods ───────────────────────────────────────────────────────
+                    function Paragraph:SetTitle(t)
+                        Paragraph.Title = t
+                        local tl = newParagraph:FindFirstChild("TitleRow")
+                        if tl then
+                            local ttext = tl:FindFirstChild("TitleText")
+                            if ttext then ttext.Text = t end
+                        else
+                            newParagraph.Title.Text = t
+                        end
+                    end
+                
+                    function Paragraph:SetDesc(d)
+                        Paragraph.Desc = d
+                        newParagraph.Description.Text    = d
+                        newParagraph.Description.Visible = d ~= ""
+                    end
+                
+                    function Paragraph:SetImage(img)
+                        local row = newParagraph:FindFirstChild("TitleRow")
+                        if row then
+                            local ic = row:FindFirstChild("Icon")
+                            if ic then ic.Image = img end
                         end
                     end
                 
