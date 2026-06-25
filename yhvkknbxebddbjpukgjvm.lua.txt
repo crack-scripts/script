@@ -3733,7 +3733,13 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
                     function Stack:Section(d)     return route(Tab.Section, d)     end
                     function Stack:Code(d)        return route(Tab.Code, d)        end
-                
+                    function Stack:Divider()
+                        local div = Templates.Divider:Clone()
+                        div.Size    = UDim2.new(0, 1, 1, 0)
+                        div.Parent  = hFrame
+                        div.Visible = true
+                    end
+                    
                     function Stack:Destroy()
                         hFrame:Destroy()
                     end
@@ -3777,7 +3783,13 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
                     function Stack:Section(d)     return route(Tab.Section, d)     end
                     function Stack:Code(d)        return route(Tab.Code, d)        end
-                
+                    function Stack:Divider()
+                        local div = Templates.Divider:Clone()
+                        div.Size    = UDim2.new(1, 0, 0, 1)
+                        div.Parent  = hFrame
+                        div.Visible = true
+                    end
+                    
                     function Stack:Destroy()
                         vFrame:Destroy()
                     end
