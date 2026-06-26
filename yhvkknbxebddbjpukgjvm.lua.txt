@@ -3869,15 +3869,59 @@ NatHub_MODULES[NatHub["3e"]] = {
                     newParagraph.Visible = true
 
                     -- ── Methods ───────────────────────────────────────────────────────
-                    function Paragraph:SetTitle(t)
-                        Paragraph.Title = t
-                        local tl = newParagraph:FindFirstChild("TitleRow")
-                        if tl then
-                            local ttext = tl:FindFirstChild("TitleText")
-                            if ttext then ttext.Text = t end
-                        else
-                            newParagraph.Title.Text = t
+                    function Paragraph:SetImage(img)
+                        local row = newParagraph:FindFirstChild("TitleRow")
+                    
+                        -- lazily build TitleRow if it wasn't created at construction
+                        if not row then
+                            newParagraph.Title.Visible = false
+                    
+                            row = Instance.new("Frame")
+                            row.Name                   = "TitleRow"
+                            row.BackgroundTransparency = 1
+                            row.BorderSizePixel        = 0
+                            row.Size                   = UDim2.new(1, 0, 0, Paragraph.ImageSize)
+                            row.AutomaticSize          = Enum.AutomaticSize.Y
+                            row.LayoutOrder            = -1
+                            row.Parent                 = newParagraph
+                    
+                            local rowLayout = Instance.new("UIListLayout")
+                            rowLayout.FillDirection    = Enum.FillDirection.Horizontal
+                            rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+                            rowLayout.Padding          = UDim.new(0, 8)
+                            rowLayout.Parent           = row
+                    
+                            local icon = Instance.new("ImageLabel")
+                            icon.Name                  = "Icon"
+                            icon.BackgroundTransparency = 1
+                            icon.BorderSizePixel       = 0
+                            icon.Size                  = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
+                            icon.Image                 = ""
+                            icon.ScaleType             = Enum.ScaleType.Fit
+                            if Paragraph.Color then icon.ImageColor3 = Paragraph.Color end
+                            icon.Parent                = row
+                            local ic = Instance.new("UICorner")
+                            ic.CornerRadius = UDim.new(0, 4)
+                            ic.Parent = icon
+                    
+                            local titleLabel = Instance.new("TextLabel")
+                            titleLabel.Name                   = "TitleText"
+                            titleLabel.BackgroundTransparency = 1
+                            titleLabel.BorderSizePixel        = 0
+                            titleLabel.Size                   = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
+                            titleLabel.AutomaticSize          = Enum.AutomaticSize.Y
+                            titleLabel.Text                   = Paragraph.Title
+                            titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
+                            titleLabel.TextWrapped            = true
+                            titleLabel.RichText               = Paragraph.RichText
+                            titleLabel.TextSize               = 16
+                            titleLabel.TextColor3             = Color3.fromRGB(197, 204, 219)
+                            titleLabel.FontFace               = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+                            titleLabel.Parent                 = row
                         end
+                    
+                        local ic = row:FindFirstChild("Icon")
+                        if ic then ic.Image = LoadImage(img) end
                     end
 
                     function Paragraph:SetDesc(d)
