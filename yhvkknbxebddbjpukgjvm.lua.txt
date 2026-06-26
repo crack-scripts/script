@@ -3336,6 +3336,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Section:Dropdown(d)  return route(Tab.Dropdown,  d) end
                     function Section:Paragraph(d) return route(Tab.Paragraph, d) end
                     function Section:Code(d)      return route(Tab.Code,      d) end
+                    function Section:Colorpicker(d) return route(Tab.Colorpicker, d) end
                     function Section:Divider()
                         local div = Templates.Divider:Clone()
                         div.Size    = UDim2.new(1, 0, 0, 1)
@@ -3944,8 +3945,237 @@ NatHub_MODULES[NatHub["3e"]] = {
                     return div
                 end
 
-				function Tab:Colorpicker()
-
+                function Tab:Colorpicker(data)
+                    local Colorpicker = {
+                        Title    = data.Title,
+                        Desc     = data.Desc,
+                        Default  = data.Default or Color3.new(1, 1, 1),
+                        Callback = data.Callback or function() end,
+                        Value    = data.Default or Color3.new(1, 1, 1),
+                    }
+                
+                    local h, s, v = Color3.toHSV(Colorpicker.Default)
+                    local Mouse = game.Players.LocalPlayer:GetMouse()
+                
+                    -- ── Card ─────────────────────────────────────────────────────────────────
+                    local card = Instance.new("Frame")
+                    card.Name             = Colorpicker.Title
+                    card.BackgroundColor3 = Color3.fromRGB(43, 46, 53)
+                    card.BorderSizePixel  = 0
+                    card.AutomaticSize    = Enum.AutomaticSize.Y
+                    card.Size             = UDim2.new(1, 0, 0, 35)
+                    card.Parent           = parentElement
+                
+                    local cc = Instance.new("UICorner"); cc.CornerRadius = UDim.new(0,6); cc.Parent = card
+                    local cardStroke = Instance.new("UIStroke")
+                    cardStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    cardStroke.Thickness = 1.5; cardStroke.Color = Color3.fromRGB(61,61,75); cardStroke.Parent = card
+                    local cp = Instance.new("UIPadding")
+                    cp.PaddingTop = UDim.new(0,10); cp.PaddingBottom = UDim.new(0,10)
+                    cp.PaddingLeft = UDim.new(0,10); cp.PaddingRight = UDim.new(0,10); cp.Parent = card
+                    local cl = Instance.new("UIListLayout"); cl.Padding = UDim.new(0,6); cl.SortOrder = Enum.SortOrder.LayoutOrder; cl.Parent = card
+                
+                    -- ── Title row ─────────────────────────────────────────────────────────────
+                    local titleRow = Instance.new("Frame")
+                    titleRow.BackgroundTransparency = 1; titleRow.BorderSizePixel = 0
+                    titleRow.Size = UDim2.new(1,0,0,15); titleRow.LayoutOrder = 0; titleRow.Parent = card
+                
+                    local titleLbl = Instance.new("TextLabel")
+                    titleLbl.BackgroundTransparency = 1; titleLbl.BorderSizePixel = 0
+                    titleLbl.Size = UDim2.new(1,-45,1,0); titleLbl.Text = Colorpicker.Title
+                    titleLbl.TextColor3 = Color3.fromRGB(197,204,219); titleLbl.TextSize = 16
+                    titleLbl.TextXAlignment = Enum.TextXAlignment.Left; titleLbl.TextWrapped = true
+                    titleLbl.FontFace = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                    titleLbl.Parent = titleRow
+                
+                    -- swatch (shows color, toggles picker)
+                    local swatch = Instance.new("TextButton")
+                    swatch.AutoButtonColor = false; swatch.BackgroundColor3 = Colorpicker.Default
+                    swatch.BorderSizePixel = 0; swatch.Text = ""
+                    swatch.Size = UDim2.new(0,36,0,18); swatch.AnchorPoint = Vector2.new(1,0.5)
+                    swatch.Position = UDim2.new(1,0,0.5,0); swatch.Parent = titleRow
+                    local sc = Instance.new("UICorner"); sc.CornerRadius = UDim.new(0,4); sc.Parent = swatch
+                    local ss = Instance.new("UIStroke"); ss.Color = Color3.fromRGB(61,61,75); ss.Thickness = 1.5
+                    ss.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ss.Parent = swatch
+                
+                    -- ── Description ───────────────────────────────────────────────────────────
+                    local descLbl = Instance.new("TextLabel")
+                    descLbl.BackgroundTransparency = 1; descLbl.BorderSizePixel = 0
+                    descLbl.Size = UDim2.new(1,0,0,15); descLbl.AutomaticSize = Enum.AutomaticSize.Y
+                    descLbl.TextColor3 = Color3.fromRGB(197,204,219); descLbl.TextSize = 14
+                    descLbl.TextXAlignment = Enum.TextXAlignment.Left; descLbl.TextWrapped = true
+                    descLbl.FontFace = Font.new("rbxassetid://11702779517", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+                    descLbl.Text = Colorpicker.Desc or ""; descLbl.Visible = (Colorpicker.Desc and Colorpicker.Desc ~= "")
+                    descLbl.LayoutOrder = 1; descLbl.Parent = card
+                
+                    -- ── Picker panel (hidden until swatch clicked) ────────────────────────────
+                    local panel = Instance.new("Frame")
+                    panel.BackgroundTransparency = 1; panel.BorderSizePixel = 0
+                    panel.Size = UDim2.new(1,0,0,0); panel.AutomaticSize = Enum.AutomaticSize.Y
+                    panel.Visible = false; panel.LayoutOrder = 2; panel.Parent = card
+                    local pl = Instance.new("UIListLayout"); pl.Padding = UDim.new(0,5); pl.SortOrder = Enum.SortOrder.LayoutOrder; pl.Parent = panel
+                
+                    -- ── Build one H/S/V slider row ────────────────────────────────────────────
+                    local function makeRow(lbl, order, gradKps)
+                        local row = Instance.new("Frame")
+                        row.BackgroundTransparency = 1; row.BorderSizePixel = 0
+                        row.Size = UDim2.new(1,0,0,18); row.LayoutOrder = order; row.Parent = panel
+                
+                        local label = Instance.new("TextLabel")
+                        label.BackgroundTransparency = 1; label.BorderSizePixel = 0
+                        label.Size = UDim2.new(0,14,1,0); label.Text = lbl
+                        label.TextColor3 = Color3.fromRGB(197,204,219); label.TextSize = 11
+                        label.FontFace = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                        label.Parent = row
+                
+                        local track = Instance.new("Frame")
+                        track.BackgroundColor3 = Color3.fromRGB(30,33,39); track.BorderSizePixel = 0
+                        track.AnchorPoint = Vector2.new(0,0.5); track.Position = UDim2.new(0,18,0.5,0)
+                        track.Size = UDim2.new(1,-18,0,12); track.Parent = row
+                        local tc = Instance.new("UICorner"); tc.CornerRadius = UDim.new(0,4); tc.Parent = track
+                        local ts = Instance.new("UIStroke"); ts.Color = Color3.fromRGB(61,61,75)
+                        ts.Thickness = 1; ts.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ts.Parent = track
+                        local grad = Instance.new("UIGradient"); grad.Color = ColorSequence.new(gradKps); grad.Parent = track
+                
+                        local thumb = Instance.new("Frame")
+                        thumb.AnchorPoint = Vector2.new(0.5,0.5); thumb.BackgroundColor3 = Color3.fromRGB(255,255,255)
+                        thumb.BorderSizePixel = 0; thumb.Size = UDim2.new(0,10,0,10)
+                        thumb.Position = UDim2.new(0,0,0.5,0); thumb.Parent = track
+                        local thc = Instance.new("UICorner"); thc.CornerRadius = UDim.new(1,0); thc.Parent = thumb
+                        local ths = Instance.new("UIStroke"); ths.Color = Color3.fromRGB(80,80,100)
+                        ths.Thickness = 1.5; ths.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; ths.Parent = thumb
+                
+                        local trigger = Instance.new("TextButton")
+                        trigger.BackgroundTransparency = 1; trigger.BorderSizePixel = 0
+                        trigger.Size = UDim2.new(1,0,1,0); trigger.Text = ""
+                        trigger.AutoButtonColor = false; trigger.Parent = track
+                
+                        return track, thumb, trigger, grad
+                    end
+                
+                    local hueKps = {}
+                    for i = 0, 6 do table.insert(hueKps, ColorSequenceKeypoint.new(i/6, Color3.fromHSV(i/6,1,1))) end
+                
+                    local hTrack, hThumb, hTrig, _    = makeRow("H", 0, hueKps)
+                    local sTrack, sThumb, sTrig, sGrad = makeRow("S", 1, {
+                        ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+                        ColorSequenceKeypoint.new(1, Color3.fromHSV(h,1,1))
+                    })
+                    local vTrack, vThumb, vTrig, vGrad = makeRow("V", 2, {
+                        ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+                        ColorSequenceKeypoint.new(1, Color3.fromHSV(h,s,1))
+                    })
+                
+                    -- ── Hex row ───────────────────────────────────────────────────────────────
+                    local hexRow = Instance.new("Frame")
+                    hexRow.BackgroundTransparency = 1; hexRow.BorderSizePixel = 0
+                    hexRow.Size = UDim2.new(1,0,0,18); hexRow.LayoutOrder = 3; hexRow.Parent = panel
+                
+                    local hexLbl = Instance.new("TextLabel")
+                    hexLbl.BackgroundTransparency = 1; hexLbl.BorderSizePixel = 0
+                    hexLbl.Size = UDim2.new(0,14,1,0); hexLbl.Text = "#"
+                    hexLbl.TextColor3 = Color3.fromRGB(197,204,219); hexLbl.TextSize = 11
+                    hexLbl.FontFace = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                    hexLbl.Parent = hexRow
+                
+                    local hexBox = Instance.new("TextBox")
+                    hexBox.BackgroundColor3 = Color3.fromRGB(32,35,41); hexBox.BorderSizePixel = 0
+                    hexBox.AnchorPoint = Vector2.new(0,0.5); hexBox.Position = UDim2.new(0,18,0.5,0)
+                    hexBox.Size = UDim2.new(1,-18,0,16); hexBox.Text = ""
+                    hexBox.TextColor3 = Color3.fromRGB(197,204,219); hexBox.TextSize = 11
+                    hexBox.FontFace = Font.new("rbxassetid://11702779517", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+                    hexBox.PlaceholderText = "RRGGBB"; hexBox.ClearTextOnFocus = false; hexBox.Parent = hexRow
+                    local hbc = Instance.new("UICorner"); hbc.CornerRadius = UDim.new(0,4); hbc.Parent = hexBox
+                    local hbp = Instance.new("UIPadding"); hbp.PaddingLeft = UDim.new(0,5); hbp.PaddingRight = UDim.new(0,5); hbp.Parent = hexBox
+                
+                    -- ── Color apply ───────────────────────────────────────────────────────────
+                    local function toHex(c)
+                        return string.format("%02X%02X%02X",
+                            math.floor(c.R*255+.5), math.floor(c.G*255+.5), math.floor(c.B*255+.5))
+                    end
+                
+                    local function applyHSV(nh, ns, nv, skipHex)
+                        h, s, v = nh, ns, nv
+                        local col = Color3.fromHSV(h, s, v)
+                        Colorpicker.Value = col
+                        swatch.BackgroundColor3 = col
+                        sGrad.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+                            ColorSequenceKeypoint.new(1, Color3.fromHSV(h,1,1))
+                        })
+                        vGrad.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, Color3.new(0,0,0)),
+                            ColorSequenceKeypoint.new(1, Color3.fromHSV(h,s,1))
+                        })
+                        if not skipHex then hexBox.Text = toHex(col) end
+                        task.spawn(Colorpicker.Callback, col)
+                    end
+                
+                    local function refreshThumbs()
+                        hThumb.Position = UDim2.new(math.clamp(h,0,1), 0, 0.5, 0)
+                        sThumb.Position = UDim2.new(math.clamp(s,0,1), 0, 0.5, 0)
+                        vThumb.Position = UDim2.new(math.clamp(v,0,1), 0, 0.5, 0)
+                    end
+                    refreshThumbs()
+                    hexBox.Text = toHex(Colorpicker.Default)
+                
+                    -- ── Drag binding ──────────────────────────────────────────────────────────
+                    local UIS = game:GetService("UserInputService")
+                    local function bindDrag(trigger, track, thumb, onPct)
+                        local down = false
+                        trigger.MouseButton1Down:Connect(function()
+                            down = true
+                            task.spawn(function()
+                                while down do
+                                    local pct = math.clamp((Mouse.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                                    thumb.Position = UDim2.new(pct, 0, 0.5, 0)
+                                    onPct(pct)
+                                    task.wait()
+                                end
+                            end)
+                        end)
+                        UIS.InputEnded:Connect(function(i)
+                            if i.UserInputType == Enum.UserInputType.MouseButton1 then down = false end
+                        end)
+                    end
+                
+                    bindDrag(hTrig, hTrack, hThumb, function(p) applyHSV(p, s, v) end)
+                    bindDrag(sTrig, sTrack, sThumb, function(p) applyHSV(h, p, v) end)
+                    bindDrag(vTrig, vTrack, vThumb, function(p) applyHSV(h, s, p) end)
+                
+                    hexBox.FocusLost:Connect(function()
+                        local raw = hexBox.Text:gsub("[^%x]",""):upper()
+                        if #raw == 6 then
+                            local r,g,b = tonumber(raw:sub(1,2),16), tonumber(raw:sub(3,4),16), tonumber(raw:sub(5,6),16)
+                            if r and g and b then
+                                h, s, v = Color3.toHSV(Color3.fromRGB(r,g,b))
+                                refreshThumbs()
+                                applyHSV(h, s, v, true)
+                                hexBox.Text = raw
+                            end
+                        end
+                    end)
+                
+                    -- ── Swatch toggle ─────────────────────────────────────────────────────────
+                    local open = false
+                    swatch.MouseButton1Click:Connect(function()
+                        open = not open
+                        panel.Visible = open
+                        Tween(cardStroke, {Color = open and Color3.fromRGB(10,135,213) or Color3.fromRGB(61,61,75)}, TweenConfigs.Global)
+                    end)
+                
+                    card.Visible = true
+                
+                    -- ── Methods ───────────────────────────────────────────────────────────────
+                    function Colorpicker:Set(color)
+                        h, s, v = Color3.toHSV(color)
+                        refreshThumbs(); applyHSV(h, s, v, false)
+                    end
+                    function Colorpicker:SetTitle(t) titleLbl.Text = t end
+                    function Colorpicker:Destroy() card:Destroy() end
+                
+                    return Colorpicker
+                end
 				end
 
 				function Tab:Toggle(data)
@@ -5020,6 +5250,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
                     function Stack:Section(d)     return route(Tab.Section, d)     end
                     function Stack:Code(d)        return route(Tab.Code, d)        end
+                    function Stack:Colorpicker(d) return route(Tab.Colorpicker, d) end
                     function Stack:Divider()
                         local div = Templates.Divider:Clone()
                         div.Size    = UDim2.new(0, 1, 1, 0)
@@ -5070,6 +5301,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                     function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
                     function Stack:Section(d)     return route(Tab.Section, d)     end
                     function Stack:Code(d)        return route(Tab.Code, d)        end
+                    function Stack:Colorpicker(d) return route(Tab.Colorpicker, d) end
                     function Stack:Divider()
                         local div = Templates.Divider:Clone()
                         div.Size    = UDim2.new(1, 0, 0, 1)
