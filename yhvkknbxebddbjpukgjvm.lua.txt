@@ -3889,147 +3889,6 @@ NatHub_MODULES[NatHub["3e"]] = {
                     return Paragraph
                 end
                 
-                function Tab:HStack(data)
-                    local gap = data and data.Gap or 6
-                    local Stack = {}
-                
-                    -- container
-                    local hFrame = Instance.new("Frame")
-                    hFrame.Name              = "HStack"
-                    hFrame.BackgroundTransparency = 1
-                    hFrame.BorderSizePixel   = 0
-                    hFrame.Size              = UDim2.new(1, 0, 0, 0)
-                    hFrame.AutomaticSize     = Enum.AutomaticSize.Y
-                    hFrame.Parent            = parentElement
-                
-                    local layout = Instance.new("UIListLayout")
-                    layout.FillDirection        = Enum.FillDirection.Horizontal
-                    layout.HorizontalAlignment  = Enum.HorizontalAlignment.Center
-                    layout.VerticalAlignment    = Enum.VerticalAlignment.Center
-                    layout.Padding              = UDim.new(0, gap)
-                    layout.SortOrder            = Enum.SortOrder.LayoutOrder
-                    layout.Parent               = hFrame
-                
-                    -- rebalance child widths evenly after each element is added
-                    -- Dividers are excluded from the split — they keep their fixed
-                    -- pixel width and that width is reserved out of the total instead.
-                    local function rebalance()
-                        local children = {}
-                        local reserved  = 0
-
-                        for _, v in ipairs(hFrame:GetChildren()) do
-                            if v:IsA("GuiObject") then
-                                if v.Name == "Divider" then
-                                    reserved = reserved + math.max(v.Size.X.Offset, 1)
-                                else
-                                    table.insert(children, v)
-                                end
-                            end
-                        end
-                
-                        local count = #children
-                        if count == 0 then return end
-                
-                        local totalGap   = gap * (count - 1)
-                        local scaleEach  = 1 / count
-                        local available  = -(totalGap + reserved)
-                        local baseOffset = math.floor(available / count)
-                        local remainder  = available - (baseOffset * count)
-                
-                        for i, v in ipairs(children) do
-                            local offset = baseOffset
-                            if i <= math.abs(remainder) then
-                                offset = offset - 1
-                            end
-                            v.Size = UDim2.new(scaleEach, offset, 0, v.Size.Y.Offset)
-                            -- preserve original Y / AutomaticSize
-                            v.AutomaticSize = Enum.AutomaticSize.Y
-                        end
-                    end
-                
-                    -- swap parentElement → hFrame, call method, swap back, rebalance
-                    local saved = parentElement
-                    local function route(fn, d)
-                        parentElement = hFrame
-                        local result = fn(Tab, d)
-                        parentElement = saved
-                        rebalance()
-                        return result
-                    end
-                
-                    -- expose same element API as Tab but routed into hFrame
-                    function Stack:Button(d)      return route(Tab.Button, d)      end
-                    function Stack:Toggle(d)      return route(Tab.Toggle, d)      end
-                    function Stack:Slider(d)      return route(Tab.Slider, d)      end
-                    function Stack:Input(d)       return route(Tab.Input, d)       end
-                    function Stack:Dropdown(d)    return route(Tab.Dropdown, d)    end
-                    function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
-                    function Stack:Section(d)     return route(Tab.Section, d)     end
-                    function Stack:Code(d)        return route(Tab.Code, d)        end
-                    function Stack:Divider()
-                        local div = Templates.Divider:Clone()
-                        div.Size    = UDim2.new(0, 1, 1, 0)
-                        div.Parent  = hFrame
-                        div.Visible = true
-                    end
-                    
-                    function Stack:Destroy()
-                        hFrame:Destroy()
-                    end
-                
-                    return Stack
-                end
-                
-                
-                function Tab:VStack(data)
-                    local gap = data and data.Gap or 6
-                    local Stack = {}
-                
-                    local vFrame = Instance.new("Frame")
-                    vFrame.Name              = "VStack"
-                    vFrame.BackgroundTransparency = 1
-                    vFrame.BorderSizePixel   = 0
-                    vFrame.Size              = UDim2.new(1, 0, 0, 0)
-                    vFrame.AutomaticSize     = Enum.AutomaticSize.Y
-                    vFrame.Parent            = parentElement
-                
-                    local layout = Instance.new("UIListLayout")
-                    layout.FillDirection       = Enum.FillDirection.Vertical
-                    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-                    layout.Padding             = UDim.new(0, gap)
-                    layout.SortOrder           = Enum.SortOrder.LayoutOrder
-                    layout.Parent              = vFrame
-                
-                    local saved = parentElement
-                    local function route(fn, d)
-                        parentElement = vFrame
-                        local result = fn(Tab, d)
-                        parentElement = saved
-                        return result
-                    end
-                
-                    function Stack:Button(d)      return route(Tab.Button, d)      end
-                    function Stack:Toggle(d)      return route(Tab.Toggle, d)      end
-                    function Stack:Slider(d)      return route(Tab.Slider, d)      end
-                    function Stack:Input(d)       return route(Tab.Input, d)       end
-                    function Stack:Dropdown(d)    return route(Tab.Dropdown, d)    end
-                    function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
-                    function Stack:Section(d)     return route(Tab.Section, d)     end
-                    function Stack:Code(d)        return route(Tab.Code, d)        end
-                    function Stack:Divider()
-                        local div = Templates.Divider:Clone()
-                        div.Size    = UDim2.new(1, 0, 0, 1)
-                        div.Parent  = vFrame
-                        div.Visible = true
-                    end
-                    
-                    function Stack:Destroy()
-                        vFrame:Destroy()
-                    end
-                
-                    return Stack
-                end
-                
                 function Tab:Divider()
                     local div = Templates.Divider:Clone()
                     div.Size    = UDim2.new(1, 0, 0, 1)
@@ -5036,6 +4895,147 @@ NatHub_MODULES[NatHub["3e"]] = {
 
 					return Dropdown
 				end
+				
+				function Tab:HStack(data)
+                    local gap = data and data.Gap or 6
+                    local Stack = {}
+                
+                    -- container
+                    local hFrame = Instance.new("Frame")
+                    hFrame.Name              = "HStack"
+                    hFrame.BackgroundTransparency = 1
+                    hFrame.BorderSizePixel   = 0
+                    hFrame.Size              = UDim2.new(1, 0, 0, 0)
+                    hFrame.AutomaticSize     = Enum.AutomaticSize.Y
+                    hFrame.Parent            = parentElement
+                
+                    local layout = Instance.new("UIListLayout")
+                    layout.FillDirection        = Enum.FillDirection.Horizontal
+                    layout.HorizontalAlignment  = Enum.HorizontalAlignment.Center
+                    layout.VerticalAlignment    = Enum.VerticalAlignment.Center
+                    layout.Padding              = UDim.new(0, gap)
+                    layout.SortOrder            = Enum.SortOrder.LayoutOrder
+                    layout.Parent               = hFrame
+                
+                    -- rebalance child widths evenly after each element is added
+                    -- Dividers are excluded from the split — they keep their fixed
+                    -- pixel width and that width is reserved out of the total instead.
+                    local function rebalance()
+                        local children = {}
+                        local reserved  = 0
+
+                        for _, v in ipairs(hFrame:GetChildren()) do
+                            if v:IsA("GuiObject") then
+                                if v.Name == "Divider" then
+                                    reserved = reserved + math.max(v.Size.X.Offset, 1)
+                                else
+                                    table.insert(children, v)
+                                end
+                            end
+                        end
+                
+                        local count = #children
+                        if count == 0 then return end
+                
+                        local totalGap   = gap * (count - 1)
+                        local scaleEach  = 1 / count
+                        local available  = -(totalGap + reserved)
+                        local baseOffset = math.floor(available / count)
+                        local remainder  = available - (baseOffset * count)
+                
+                        for i, v in ipairs(children) do
+                            local offset = baseOffset
+                            if i <= math.abs(remainder) then
+                                offset = offset - 1
+                            end
+                            v.Size = UDim2.new(scaleEach, offset, 0, v.Size.Y.Offset)
+                            -- preserve original Y / AutomaticSize
+                            v.AutomaticSize = Enum.AutomaticSize.Y
+                        end
+                    end
+                
+                    -- swap parentElement → hFrame, call method, swap back, rebalance
+                    local saved = parentElement
+                    local function route(fn, d)
+                        parentElement = hFrame
+                        local result = fn(Tab, d)
+                        parentElement = saved
+                        rebalance()
+                        return result
+                    end
+                
+                    -- expose same element API as Tab but routed into hFrame
+                    function Stack:Button(d)      return route(Tab.Button, d)      end
+                    function Stack:Toggle(d)      return route(Tab.Toggle, d)      end
+                    function Stack:Slider(d)      return route(Tab.Slider, d)      end
+                    function Stack:Input(d)       return route(Tab.Input, d)       end
+                    function Stack:Dropdown(d)    return route(Tab.Dropdown, d)    end
+                    function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
+                    function Stack:Section(d)     return route(Tab.Section, d)     end
+                    function Stack:Code(d)        return route(Tab.Code, d)        end
+                    function Stack:Divider()
+                        local div = Templates.Divider:Clone()
+                        div.Size    = UDim2.new(0, 1, 1, 0)
+                        div.Parent  = hFrame
+                        div.Visible = true
+                    end
+                    
+                    function Stack:Destroy()
+                        hFrame:Destroy()
+                    end
+                
+                    return Stack
+                end
+                
+                
+                function Tab:VStack(data)
+                    local gap = data and data.Gap or 6
+                    local Stack = {}
+                
+                    local vFrame = Instance.new("Frame")
+                    vFrame.Name              = "VStack"
+                    vFrame.BackgroundTransparency = 1
+                    vFrame.BorderSizePixel   = 0
+                    vFrame.Size              = UDim2.new(1, 0, 0, 0)
+                    vFrame.AutomaticSize     = Enum.AutomaticSize.Y
+                    vFrame.Parent            = parentElement
+                
+                    local layout = Instance.new("UIListLayout")
+                    layout.FillDirection       = Enum.FillDirection.Vertical
+                    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                    layout.Padding             = UDim.new(0, gap)
+                    layout.SortOrder           = Enum.SortOrder.LayoutOrder
+                    layout.Parent              = vFrame
+                
+                    local saved = parentElement
+                    local function route(fn, d)
+                        parentElement = vFrame
+                        local result = fn(Tab, d)
+                        parentElement = saved
+                        return result
+                    end
+                
+                    function Stack:Button(d)      return route(Tab.Button, d)      end
+                    function Stack:Toggle(d)      return route(Tab.Toggle, d)      end
+                    function Stack:Slider(d)      return route(Tab.Slider, d)      end
+                    function Stack:Input(d)       return route(Tab.Input, d)       end
+                    function Stack:Dropdown(d)    return route(Tab.Dropdown, d)    end
+                    function Stack:Paragraph(d)   return route(Tab.Paragraph, d)   end
+                    function Stack:Section(d)     return route(Tab.Section, d)     end
+                    function Stack:Code(d)        return route(Tab.Code, d)        end
+                    function Stack:Divider()
+                        local div = Templates.Divider:Clone()
+                        div.Size    = UDim2.new(1, 0, 0, 1)
+                        div.Parent  = vFrame
+                        div.Visible = true
+                    end
+                    
+                    function Stack:Destroy()
+                        vFrame:Destroy()
+                    end
+                
+                    return Stack
+                end
 
 				return Tab
 			end
