@@ -4319,7 +4319,6 @@ NatHub_MODULES[NatHub["3e"]] = {
                 
                     return Colorpicker
                 end
-				end
 
 				function Tab:Toggle(data)
 					local Toggle = {
