@@ -3536,13 +3536,13 @@ NatHub_MODULES[NatHub["3e"]] = {
                         Title     = data.Title,
                         Desc      = data.Desc,
                         RichText  = data.RichText  or false,
-                        Image     = data.Image     or nil,   -- side icon (beside title)
+                        Image     = data.Image     or nil,
                         ImageSize = data.ImageSize or 36,
-                        Thumbnail = data.Thumbnail or nil,   -- top banner (full width)
+                        Thumbnail = data.Thumbnail or nil,
                         ThumbnailSize = data.ThumbnailSize or 80,
-                        Buttons   = data.Buttons   or nil,   -- { {Title, Icon, Callback} }
-                        Color     = data.Color     or nil,   -- Color3 accent tint
-                        Tags      = data.Tags      or nil,   -- { "New", {Text="Beta", Color=Color3...} }
+                        Buttons   = data.Buttons   or nil,
+                        Color     = data.Color     or nil,
+                        Tags      = data.Tags      or nil,
                         Locked    = data.Locked    or false,
                     }
 
@@ -3553,56 +3553,64 @@ NatHub_MODULES[NatHub["3e"]] = {
                             base.B + (tint.B - base.B) * alpha
                         )
                     end
-                    
+
+                    -- ── ApplyImage: handles rbxassetid, rbxthumb, roblox headshots, external URLs ──
                     local function ApplyImage(label, url)
                         if typeof(url) ~= "string" or url == "" then
                             label.Image = url or ""
                             return
                         end
-                    
+
                         -- rbxassetid / rbxthumb / icon name — direct assign
                         if not url:match("^https?://") then
                             label.Image = url
                             return
                         end
-                    
-                        -- roblox.com thumbnail URLs — direct assign (mirrors WindUI behavior)
+
+                        -- roblox.com headshot thumbnail — convert to rbxthumb (direct assign won't work)
                         if url:match("roblox%.com") then
-                            label.Image = url
+                            local userId = url:match("userId=(%d+)")
+                            if userId then
+                                label.Image = "rbxthumb://type=AvatarHeadShot&id=" .. userId .. "&w=420&h=420"
+                            end
                             return
                         end
-                    
-                        -- external HTTP URL — async download + getcustomasset
+
+                        -- external HTTP URL (Discord CDN etc.) — async download + getcustomasset
                         task.spawn(function()
                             local hash = 0
                             for i = 1, #url do
                                 hash = (hash * 31 + string.byte(url, i)) % 2147483647
                             end
-                            local FileName = "NatHub/ImageCache/." .. tostring(hash) .. ".png"
-                    
+                            local FileName = "NatHub/ImageCache/" .. tostring(hash) .. ".png"
+
                             if makefolder then pcall(makefolder, "NatHub/ImageCache") end
-                    
+
                             local ok, err = pcall(function()
-                                local requestFn = (syn and syn.request) or request or http_request or (http and http.request)
+                                local requestFn = (syn and syn.request)
+                                    or request
+                                    or http_request
+                                    or (http and http.request)
                                 if not requestFn then error("no http function") end
-                    
-                                local response = requestFn({ Url = url, Method = "GET" })
-                                if not (response and response.Body) then error("empty response") end
-                    
-                                if writefile then
-                                    pcall(writefile, FileName, response.Body)
+
+                                if not (isfile and isfile(FileName)) then
+                                    local response = requestFn({ Url = url, Method = "GET" })
+                                    if not (response and response.Body) then error("empty response") end
+                                    if writefile then
+                                        pcall(writefile, FileName, response.Body)
+                                    end
                                 end
-                    
+
                                 local assetOk, asset = pcall(getcustomasset, FileName)
                                 if assetOk then
                                     label.Image = asset
                                 else
-                                    warn("[NatHub] getcustomasset failed for: " .. url .. " → " .. tostring(asset))
+                                    warn("[NatHub] getcustomasset failed: " .. tostring(asset))
                                 end
                             end)
-                    
+
                             if not ok then
-                                warn("[NatHub] ApplyImage failed: " .. tostring(err))
+                                warn("[NatHub] ApplyImage failed for " .. url .. ": " .. tostring(err))
                             end
                         end)
                     end
@@ -3611,7 +3619,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                     newParagraph.Name   = Paragraph.Title
                     newParagraph.Parent = parentElement
 
-                    -- ── Resting (default) colors — shifted if Color is set ────────────
+                    -- ── Resting colors — shifted if Color is set ──────────────────────
                     local restingBg     = Color3.fromRGB(43, 46, 53)
                     local restingStroke = Color3.fromRGB(61, 61, 75)
 
@@ -3627,97 +3635,97 @@ NatHub_MODULES[NatHub["3e"]] = {
                     local function buildThumbnail(image, size)
                         if thumb then thumb:Destroy() end
                         thumb = Instance.new("ImageLabel")
-                        thumb.Name                  = "Thumbnail"
+                        thumb.Name                   = "Thumbnail"
                         thumb.BackgroundTransparency = 1
-                        thumb.BorderSizePixel       = 0
-                        thumb.Size                  = UDim2.new(1, 0, 0, size)
-                        thumb.Image                 = ""
-                        ApplyImage(thumb, image)
-                        thumb.ScaleType             = Enum.ScaleType.Crop
-                        thumb.LayoutOrder           = -2
-                        thumb.Parent                = newParagraph
+                        thumb.BorderSizePixel        = 0
+                        thumb.Size                   = UDim2.new(1, 0, 0, size)
+                        thumb.Image                  = ""
+                        thumb.ScaleType              = Enum.ScaleType.Crop
+                        thumb.LayoutOrder            = -2
+                        thumb.Parent                 = newParagraph
                         local c = Instance.new("UICorner")
                         c.CornerRadius = UDim.new(0, 4)
                         c.Parent = thumb
+                        ApplyImage(thumb, image)
                     end
 
                     if Paragraph.Thumbnail then
                         buildThumbnail(Paragraph.Thumbnail, Paragraph.ThumbnailSize)
                     end
 
-                    -- ── Title row — image on side if Image provided (LayoutOrder = -1) ─
-                    if Paragraph.Image then
-                        -- hide the original flat title
-                        newParagraph.Title.Visible = false
-
+                    -- ── Title row — image beside title if Image provided (LayoutOrder = -1) ─
+                    local function buildTitleRow()
                         local titleRow = Instance.new("Frame")
-                        titleRow.Name               = "TitleRow"
+                        titleRow.Name                = "TitleRow"
                         titleRow.BackgroundTransparency = 1
-                        titleRow.BorderSizePixel    = 0
-                        titleRow.Size               = UDim2.new(1, 0, 0, Paragraph.ImageSize)
-                        titleRow.AutomaticSize      = Enum.AutomaticSize.Y
-                        titleRow.LayoutOrder        = -1
-                        titleRow.Parent             = newParagraph
+                        titleRow.BorderSizePixel     = 0
+                        titleRow.Size                = UDim2.new(1, 0, 0, Paragraph.ImageSize)
+                        titleRow.AutomaticSize       = Enum.AutomaticSize.Y
+                        titleRow.LayoutOrder         = -1
+                        titleRow.Parent              = newParagraph
 
                         local rowLayout = Instance.new("UIListLayout")
-                        rowLayout.FillDirection       = Enum.FillDirection.Horizontal
-                        rowLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
-                        rowLayout.Padding             = UDim.new(0, 8)
-                        rowLayout.Parent              = titleRow
+                        rowLayout.FillDirection      = Enum.FillDirection.Horizontal
+                        rowLayout.VerticalAlignment  = Enum.VerticalAlignment.Center
+                        rowLayout.Padding            = UDim.new(0, 8)
+                        rowLayout.Parent             = titleRow
 
                         local icon = Instance.new("ImageLabel")
-                        icon.Name                   = "Icon"
-                        icon.BackgroundTransparency = 1
-                        icon.BorderSizePixel        = 0
-                        icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
-                        ApplyImage(icon, Paragraph.Image)
-                        icon.ScaleType              = Enum.ScaleType.Fit
-                        if Paragraph.Color then
-                            icon.ImageColor3 = Paragraph.Color
-                        end
-                        icon.Parent                 = titleRow
+                        icon.Name                    = "Icon"
+                        icon.BackgroundTransparency  = 1
+                        icon.BorderSizePixel         = 0
+                        icon.Size                    = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
+                        icon.Image                   = ""
+                        icon.ScaleType               = Enum.ScaleType.Fit
+                        if Paragraph.Color then icon.ImageColor3 = Paragraph.Color end
+                        icon.Parent                  = titleRow
                         local ic = Instance.new("UICorner")
                         ic.CornerRadius = UDim.new(0, 4)
                         ic.Parent = icon
 
                         local titleLabel = Instance.new("TextLabel")
-                        titleLabel.Name                 = "TitleText"
+                        titleLabel.Name                   = "TitleText"
                         titleLabel.BackgroundTransparency = 1
-                        titleLabel.BorderSizePixel      = 0
-                        titleLabel.Size                 = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
-                        titleLabel.AutomaticSize        = Enum.AutomaticSize.Y
-                        titleLabel.Text                 = Paragraph.Title
-                        titleLabel.TextXAlignment       = Enum.TextXAlignment.Left
-                        titleLabel.TextWrapped          = true
-                        titleLabel.RichText             = Paragraph.RichText
-                        titleLabel.TextSize             = 16
-                        titleLabel.TextColor3          = Color3.fromRGB(197, 204, 219)
-                        titleLabel.FontFace             = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-                        titleLabel.Parent               = titleRow
+                        titleLabel.BorderSizePixel        = 0
+                        titleLabel.Size                   = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
+                        titleLabel.AutomaticSize          = Enum.AutomaticSize.Y
+                        titleLabel.Text                   = Paragraph.Title
+                        titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
+                        titleLabel.TextWrapped            = true
+                        titleLabel.RichText               = Paragraph.RichText
+                        titleLabel.TextSize               = 16
+                        titleLabel.TextColor3             = Color3.fromRGB(197, 204, 219)
+                        titleLabel.FontFace               = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+                        titleLabel.Parent                 = titleRow
+
+                        return titleRow
+                    end
+
+                    if Paragraph.Image then
+                        newParagraph.Title.Visible = false
+                        local titleRow = buildTitleRow()
+                        ApplyImage(titleRow:FindFirstChild("Icon"), Paragraph.Image)
                     else
-                        newParagraph.Title.Visible  = true
-                        newParagraph.Title.Text     = Paragraph.Title
-                        newParagraph.Title.RichText = Paragraph.RichText
+                        newParagraph.Title.Visible     = true
+                        newParagraph.Title.Text        = Paragraph.Title
+                        newParagraph.Title.RichText    = Paragraph.RichText
                         newParagraph.Title.LayoutOrder = -1
                     end
 
-                    -- ── Tags (small chip labels, LayoutOrder = 0) ─────────────────────
+                    -- ── Tags (LayoutOrder = 0) ────────────────────────────────────────
                     local tagsRow
                     local function buildTags(tags)
-                        if tagsRow then
-                            tagsRow:Destroy()
-                            tagsRow = nil
-                        end
+                        if tagsRow then tagsRow:Destroy() tagsRow = nil end
                         if not tags or #tags == 0 then return end
 
                         tagsRow = Instance.new("Frame")
-                        tagsRow.Name               = "Tags"
+                        tagsRow.Name                = "Tags"
                         tagsRow.BackgroundTransparency = 1
-                        tagsRow.BorderSizePixel    = 0
-                        tagsRow.Size               = UDim2.new(1, 0, 0, 20)
-                        tagsRow.AutomaticSize      = Enum.AutomaticSize.Y
-                        tagsRow.LayoutOrder        = 0
-                        tagsRow.Parent             = newParagraph
+                        tagsRow.BorderSizePixel     = 0
+                        tagsRow.Size                = UDim2.new(1, 0, 0, 20)
+                        tagsRow.AutomaticSize       = Enum.AutomaticSize.Y
+                        tagsRow.LayoutOrder         = 0
+                        tagsRow.Parent              = newParagraph
 
                         local tagLayout = Instance.new("UIListLayout")
                         tagLayout.FillDirection       = Enum.FillDirection.Horizontal
@@ -3766,64 +3774,63 @@ NatHub_MODULES[NatHub["3e"]] = {
 
                     -- ── Description (LayoutOrder = 1) ─────────────────────────────────
                     if Paragraph.Desc and Paragraph.Desc ~= "" then
-                        newParagraph.Description.Text     = Paragraph.Desc
-                        newParagraph.Description.RichText = Paragraph.RichText
+                        newParagraph.Description.Text        = Paragraph.Desc
+                        newParagraph.Description.RichText    = Paragraph.RichText
                         newParagraph.Description.LayoutOrder = 1
-                        newParagraph.Description.Visible  = true
+                        newParagraph.Description.Visible     = true
                     else
-                        newParagraph.Description.Visible  = false
+                        newParagraph.Description.Visible = false
                     end
 
-                    -- ── Buttons row (LayoutOrder = 2) ──────────────────────────────────
+                    -- ── Buttons row (LayoutOrder = 2) ─────────────────────────────────
                     if Paragraph.Buttons and #Paragraph.Buttons > 0 then
                         local btnRow = Instance.new("Frame")
-                        btnRow.Name               = "ButtonRow"
+                        btnRow.Name                = "ButtonRow"
                         btnRow.BackgroundTransparency = 1
-                        btnRow.BorderSizePixel    = 0
-                        btnRow.Size               = UDim2.new(1, 0, 0, 30)
-                        btnRow.AutomaticSize      = Enum.AutomaticSize.Y
-                        btnRow.LayoutOrder        = 2
-                        btnRow.Parent             = newParagraph
+                        btnRow.BorderSizePixel     = 0
+                        btnRow.Size                = UDim2.new(1, 0, 0, 30)
+                        btnRow.AutomaticSize       = Enum.AutomaticSize.Y
+                        btnRow.LayoutOrder         = 2
+                        btnRow.Parent              = newParagraph
 
                         local btnLayout = Instance.new("UIListLayout")
-                        btnLayout.FillDirection      = Enum.FillDirection.Horizontal
+                        btnLayout.FillDirection       = Enum.FillDirection.Horizontal
                         btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-                        btnLayout.VerticalAlignment  = Enum.VerticalAlignment.Center
-                        btnLayout.Padding            = UDim.new(0, 6)
-                        btnLayout.Parent             = btnRow
+                        btnLayout.VerticalAlignment   = Enum.VerticalAlignment.Center
+                        btnLayout.Padding             = UDim.new(0, 6)
+                        btnLayout.Parent              = btnRow
 
-                        local count = #Paragraph.Buttons
-                        local gap   = 6
-                        local totalGap   = gap * (count - 1)
+                        local count      = #Paragraph.Buttons
+                        local totalGap   = 6 * (count - 1)
                         local offsetEach = -math.floor(totalGap / count)
 
                         for i, btnData in ipairs(Paragraph.Buttons) do
                             local btn = Instance.new("TextButton")
-                            btn.Name               = btnData.Title or ("Btn"..i)
-                            btn.BackgroundColor3   = Color3.fromRGB(55, 59, 68)
-                            btn.BorderSizePixel    = 0
-                            btn.Size               = UDim2.new(1/count, offsetEach, 0, 28)
-                            btn.Text               = btnData.Title or ""
-                            btn.TextColor3         = Color3.fromRGB(197, 204, 219)
-                            btn.TextSize           = 13
-                            btn.FontFace           = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-                            btn.AutoButtonColor    = false
-                            btn.Parent             = btnRow
+                            btn.Name             = btnData.Title or ("Btn" .. i)
+                            btn.BackgroundColor3 = Color3.fromRGB(55, 59, 68)
+                            btn.BorderSizePixel  = 0
+                            btn.Size             = UDim2.new(1 / count, offsetEach, 0, 28)
+                            btn.Text             = btnData.Title or ""
+                            btn.TextColor3       = Color3.fromRGB(197, 204, 219)
+                            btn.TextSize         = 13
+                            btn.FontFace         = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                            btn.AutoButtonColor  = false
+                            btn.Parent           = btnRow
 
                             local bc = Instance.new("UICorner")
                             bc.CornerRadius = UDim.new(0, 5)
                             bc.Parent = btn
                             local bs = Instance.new("UIStroke")
-                            bs.Color     = Color3.fromRGB(61, 61, 75)
-                            bs.Thickness = 1
+                            bs.Color           = Color3.fromRGB(61, 61, 75)
+                            bs.Thickness       = 1
                             bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
                             bs.Parent = btn
 
                             btn.MouseEnter:Connect(function()
-                                Tween(btn, {BackgroundColor3 = Color3.fromRGB(65, 70, 82)}, TweenConfigs.Global)
+                                Tween(btn, { BackgroundColor3 = Color3.fromRGB(65, 70, 82) }, TweenConfigs.Global)
                             end)
                             btn.MouseLeave:Connect(function()
-                                Tween(btn, {BackgroundColor3 = Color3.fromRGB(55, 59, 68)}, TweenConfigs.Global)
+                                Tween(btn, { BackgroundColor3 = Color3.fromRGB(55, 59, 68) }, TweenConfigs.Global)
                             end)
                             btn.MouseButton1Click:Connect(function()
                                 if not Paragraph.Locked and btnData.Callback then btnData.Callback() end
@@ -3831,18 +3838,18 @@ NatHub_MODULES[NatHub["3e"]] = {
                         end
                     end
 
-                    -- ── Lock overlay (dims card + blocks clicks underneath) ────────────
+                    -- ── Lock overlay ──────────────────────────────────────────────────
                     local lockOverlay = Instance.new("TextButton")
-                    lockOverlay.Name                   = "LockOverlay"
-                    lockOverlay.Text                    = ""
-                    lockOverlay.AutoButtonColor         = false
-                    lockOverlay.BackgroundColor3        = Color3.fromRGB(20, 21, 25)
-                    lockOverlay.BackgroundTransparency  = 0.45
-                    lockOverlay.BorderSizePixel         = 0
-                    lockOverlay.Size                    = UDim2.new(1, 0, 1, 0)
-                    lockOverlay.ZIndex                  = 5
-                    lockOverlay.Visible                 = false
-                    lockOverlay.Parent                  = newParagraph
+                    lockOverlay.Name                  = "LockOverlay"
+                    lockOverlay.Text                  = ""
+                    lockOverlay.AutoButtonColor       = false
+                    lockOverlay.BackgroundColor3      = Color3.fromRGB(20, 21, 25)
+                    lockOverlay.BackgroundTransparency = 0.45
+                    lockOverlay.BorderSizePixel       = 0
+                    lockOverlay.Size                  = UDim2.new(1, 0, 1, 0)
+                    lockOverlay.ZIndex                = 5
+                    lockOverlay.Visible               = false
+                    lockOverlay.Parent                = newParagraph
 
                     local locC = Instance.new("UICorner")
                     locC.CornerRadius = UDim.new(0, 6)
@@ -3856,91 +3863,45 @@ NatHub_MODULES[NatHub["3e"]] = {
                     lockLayout.Parent              = lockOverlay
 
                     local lockIcon = Instance.new("ImageLabel")
-                    lockIcon.Name               = "LockIcon"
+                    lockIcon.Name                = "LockIcon"
                     lockIcon.BackgroundTransparency = 1
-                    lockIcon.Size               = UDim2.new(0, 16, 0, 16)
-                    lockIcon.ZIndex             = 6
+                    lockIcon.Size                = UDim2.new(0, 16, 0, 16)
+                    lockIcon.ZIndex              = 6
                     local lockIconData = IconModule.Icon("lock")
                     if lockIconData then
                         lockIcon.Image           = lockIconData[1]
                         lockIcon.ImageRectOffset = lockIconData[2].ImageRectPosition
                         lockIcon.ImageRectSize   = lockIconData[2].ImageRectSize
                     end
-                    lockIcon.ImageColor3        = Color3.fromRGB(197, 204, 219)
-                    lockIcon.Parent             = lockOverlay
+                    lockIcon.ImageColor3 = Color3.fromRGB(197, 204, 219)
+                    lockIcon.Parent      = lockOverlay
 
                     local lockLabel = Instance.new("TextLabel")
-                    lockLabel.Name              = "LockText"
+                    lockLabel.Name                = "LockText"
                     lockLabel.BackgroundTransparency = 1
-                    lockLabel.AutomaticSize     = Enum.AutomaticSize.X
-                    lockLabel.Size              = UDim2.new(0, 0, 0, 16)
-                    lockLabel.Text              = "Locked"
-                    lockLabel.TextColor3        = Color3.fromRGB(197, 204, 219)
-                    lockLabel.TextSize          = 13
-                    lockLabel.ZIndex            = 6
-                    lockLabel.FontFace          = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
-                    lockLabel.Parent            = lockOverlay
+                    lockLabel.AutomaticSize       = Enum.AutomaticSize.X
+                    lockLabel.Size                = UDim2.new(0, 0, 0, 16)
+                    lockLabel.Text                = "Locked"
+                    lockLabel.TextColor3          = Color3.fromRGB(197, 204, 219)
+                    lockLabel.TextSize            = 13
+                    lockLabel.ZIndex              = 6
+                    lockLabel.FontFace            = Font.new("rbxassetid://11702779517", Enum.FontWeight.SemiBold, Enum.FontStyle.Normal)
+                    lockLabel.Parent              = lockOverlay
 
-                    if Paragraph.Locked then
-                        lockOverlay.Visible = true
-                    end
+                    if Paragraph.Locked then lockOverlay.Visible = true end
 
                     newParagraph.Visible = true
 
                     -- ── Methods ───────────────────────────────────────────────────────
-                    function Paragraph:SetImage(img)
+                    function Paragraph:SetTitle(t)
+                        Paragraph.Title = t
                         local row = newParagraph:FindFirstChild("TitleRow")
-                    
-                        -- lazily build TitleRow if it wasn't created at construction
-                        if not row then
-                            newParagraph.Title.Visible = false
-                    
-                            row = Instance.new("Frame")
-                            row.Name                   = "TitleRow"
-                            row.BackgroundTransparency = 1
-                            row.BorderSizePixel        = 0
-                            row.Size                   = UDim2.new(1, 0, 0, Paragraph.ImageSize)
-                            row.AutomaticSize          = Enum.AutomaticSize.Y
-                            row.LayoutOrder            = -1
-                            row.Parent                 = newParagraph
-                    
-                            local rowLayout = Instance.new("UIListLayout")
-                            rowLayout.FillDirection    = Enum.FillDirection.Horizontal
-                            rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-                            rowLayout.Padding          = UDim.new(0, 8)
-                            rowLayout.Parent           = row
-                    
-                            local icon = Instance.new("ImageLabel")
-                            icon.Name                  = "Icon"
-                            icon.BackgroundTransparency = 1
-                            icon.BorderSizePixel       = 0
-                            icon.Size                  = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
-                            icon.Image                 = ""
-                            icon.ScaleType             = Enum.ScaleType.Fit
-                            if Paragraph.Color then icon.ImageColor3 = Paragraph.Color end
-                            icon.Parent                = row
-                            local ic = Instance.new("UICorner")
-                            ic.CornerRadius = UDim.new(0, 4)
-                            ic.Parent = icon
-                    
-                            local titleLabel = Instance.new("TextLabel")
-                            titleLabel.Name                   = "TitleText"
-                            titleLabel.BackgroundTransparency = 1
-                            titleLabel.BorderSizePixel        = 0
-                            titleLabel.Size                   = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
-                            titleLabel.AutomaticSize          = Enum.AutomaticSize.Y
-                            titleLabel.Text                   = Paragraph.Title
-                            titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
-                            titleLabel.TextWrapped            = true
-                            titleLabel.RichText               = Paragraph.RichText
-                            titleLabel.TextSize               = 16
-                            titleLabel.TextColor3             = Color3.fromRGB(197, 204, 219)
-                            titleLabel.FontFace               = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-                            titleLabel.Parent                 = row
+                        if row then
+                            local ttext = row:FindFirstChild("TitleText")
+                            if ttext then ttext.Text = t end
+                        else
+                            newParagraph.Title.Text = t
                         end
-                    
-                        local ic = row:FindFirstChild("Icon")
-                        if ic then ic.Image = LoadImage(img) end
                     end
 
                     function Paragraph:SetDesc(d)
@@ -3951,54 +3912,10 @@ NatHub_MODULES[NatHub["3e"]] = {
 
                     function Paragraph:SetImage(img)
                         local row = newParagraph:FindFirstChild("TitleRow")
-                    
                         if not row then
                             newParagraph.Title.Visible = false
-                    
-                            row = Instance.new("Frame")
-                            row.Name                   = "TitleRow"
-                            row.BackgroundTransparency = 1
-                            row.BorderSizePixel        = 0
-                            row.Size                   = UDim2.new(1, 0, 0, Paragraph.ImageSize)
-                            row.AutomaticSize          = Enum.AutomaticSize.Y
-                            row.LayoutOrder            = -1
-                            row.Parent                 = newParagraph
-                    
-                            local rowLayout = Instance.new("UIListLayout")
-                            rowLayout.FillDirection     = Enum.FillDirection.Horizontal
-                            rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-                            rowLayout.Padding           = UDim.new(0, 8)
-                            rowLayout.Parent            = row
-                    
-                            local icon = Instance.new("ImageLabel")
-                            icon.Name                   = "Icon"
-                            icon.BackgroundTransparency = 1
-                            icon.BorderSizePixel        = 0
-                            icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
-                            icon.Image                  = ""
-                            icon.ScaleType              = Enum.ScaleType.Fit
-                            if Paragraph.Color then icon.ImageColor3 = Paragraph.Color end
-                            icon.Parent                 = row
-                            local ic = Instance.new("UICorner")
-                            ic.CornerRadius = UDim.new(0, 4)
-                            ic.Parent = icon
-                    
-                            local titleLabel = Instance.new("TextLabel")
-                            titleLabel.Name                   = "TitleText"
-                            titleLabel.BackgroundTransparency = 1
-                            titleLabel.BorderSizePixel        = 0
-                            titleLabel.Size                   = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
-                            titleLabel.AutomaticSize          = Enum.AutomaticSize.Y
-                            titleLabel.Text                   = Paragraph.Title
-                            titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
-                            titleLabel.TextWrapped            = true
-                            titleLabel.RichText               = Paragraph.RichText
-                            titleLabel.TextSize               = 16
-                            titleLabel.TextColor3             = Color3.fromRGB(197, 204, 219)
-                            titleLabel.FontFace               = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-                            titleLabel.Parent                 = row
+                            row = buildTitleRow()
                         end
-                    
                         local ic = row:FindFirstChild("Icon")
                         if ic then ApplyImage(ic, img) end
                     end
@@ -4031,11 +3948,11 @@ NatHub_MODULES[NatHub["3e"]] = {
                     end
 
                     function Paragraph:Highlight()
-                        Tween(newParagraph, {BackgroundColor3 = Color3.fromRGB(58, 63, 74)}, TweenConfigs.Notification)
-                        Tween(newParagraph.UIStroke, {Color = Color3.fromRGB(120, 170, 255), Thickness = 2}, TweenConfigs.Notification)
+                        Tween(newParagraph, { BackgroundColor3 = Color3.fromRGB(58, 63, 74) }, TweenConfigs.Notification)
+                        Tween(newParagraph.UIStroke, { Color = Color3.fromRGB(120, 170, 255), Thickness = 2 }, TweenConfigs.Notification)
                         task.delay(TweenConfigs.Notification.Duration, function()
-                            Tween(newParagraph, {BackgroundColor3 = restingBg}, TweenConfigs.Global)
-                            Tween(newParagraph.UIStroke, {Color = restingStroke, Thickness = 1.5}, TweenConfigs.Global)
+                            Tween(newParagraph, { BackgroundColor3 = restingBg }, TweenConfigs.Global)
+                            Tween(newParagraph.UIStroke, { Color = restingStroke, Thickness = 1.5 }, TweenConfigs.Global)
                         end)
                     end
 
@@ -4045,6 +3962,7 @@ NatHub_MODULES[NatHub["3e"]] = {
 
                     return Paragraph
                 end
+
                 
                 function Tab:HStack(data)
                     local gap = data and data.Gap or 6
