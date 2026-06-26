@@ -4029,6 +4029,14 @@ NatHub_MODULES[NatHub["3e"]] = {
                 
                     return Stack
                 end
+                
+                function Tab:Divider()
+                    local div = Templates.Divider:Clone()
+                    div.Size    = UDim2.new(1, 0, 0, 1)
+                    div.Parent  = parentElement
+                    div.Visible = true
+                    return div
+                end
 
 				function Tab:Colorpicker()
 
