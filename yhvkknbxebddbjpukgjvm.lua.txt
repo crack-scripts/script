@@ -3613,7 +3613,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                         thumb.BackgroundTransparency = 1
                         thumb.BorderSizePixel       = 0
                         thumb.Size                  = UDim2.new(1, 0, 0, size)
-                        thumb.Image                 = image
+                        thumb.Image                 = LoadImage(image)
                         thumb.ScaleType             = Enum.ScaleType.Crop
                         thumb.LayoutOrder           = -2
                         thumb.Parent                = newParagraph
@@ -3651,7 +3651,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                         icon.BackgroundTransparency = 1
                         icon.BorderSizePixel        = 0
                         icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
-                        icon.Image                  = Paragraph.Image
+                        icon.Image                  = LoadImage(Paragraph.Image)
                         icon.ScaleType              = Enum.ScaleType.Fit
                         if Paragraph.Color then
                             icon.ImageColor3 = Paragraph.Color
@@ -3890,7 +3890,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                         local row = newParagraph:FindFirstChild("TitleRow")
                         if row then
                             local ic = row:FindFirstChild("Icon")
-                            if ic then ic.Image = img end
+                            if ic then ic.Image = LoadImage(img) end
                         end
                     end
 
@@ -5242,10 +5242,16 @@ NatHub_MODULES[NatHub["3e"]] = {
 						AddButtons(Dropdown.Values)
 					end
 
-					newDropdown.Title.BoxFrame.Trigger.MouseButton1Click:Connect(function()
-						DropdownPopup(nil, Dropdown.Title)
-					end)
-
+                    newDropdown.Title.BoxFrame.Trigger.MouseButton1Click:Connect(function()
+                        DropdownPopup(nil, Dropdown.Title)
+                    end)
+                    
+                    newDropdown.MouseButton1Click:Connect(function()
+                        if not Dropdown.Locked then
+                            DropdownPopup(nil, Dropdown.Title)
+                        end
+                    end)
+                    
 					function Dropdown:SetTitle(newText)
 						Dropdown.Title = newText
 						newDropdown.Title.Text = newText
