@@ -3554,39 +3554,57 @@ NatHub_MODULES[NatHub["3e"]] = {
                         )
                     end
                     
-                    local function LoadImage(url)
-                        if typeof(url) ~= "string" or not url:match("^https?://") then
-                            return url -- already rbxassetid / icon-name / nil — nothing to do
+                    local function ApplyImage(label, url)
+                        if typeof(url) ~= "string" or url == "" then
+                            label.Image = url or ""
+                            return
                         end
-
-                        if not (writefile and isfile and getcustomasset) then
-                            return url -- executor has no filesystem access, can't cache externally
+                    
+                        -- rbxassetid / rbxthumb / icon name — direct assign
+                        if not url:match("^https?://") then
+                            label.Image = url
+                            return
                         end
-
-                        local ok, result = pcall(function()
-                            local folder = "NatHub/ImageCache"
-                            if makefolder then pcall(makefolder, folder) end
-
+                    
+                        -- roblox.com thumbnail URLs — direct assign (mirrors WindUI behavior)
+                        if url:match("roblox%.com") then
+                            label.Image = url
+                            return
+                        end
+                    
+                        -- external HTTP URL — async download + getcustomasset
+                        task.spawn(function()
                             local hash = 0
                             for i = 1, #url do
                                 hash = (hash * 31 + string.byte(url, i)) % 2147483647
                             end
-                            local path = folder .. "/" .. tostring(hash) .. ".png"
-
-                            if not isfile(path) then
-                                local httpFunc = (syn and syn.request) or request or http_request or (http and http.request)
-                                if not httpFunc then return url end
-
-                                local response = httpFunc({ Url = url, Method = "GET" })
-                                if not (response and response.Body) then return url end
-
-                                writefile(path, response.Body)
+                            local FileName = "NatHub/ImageCache/." .. tostring(hash) .. ".png"
+                    
+                            if makefolder then pcall(makefolder, "NatHub/ImageCache") end
+                    
+                            local ok, err = pcall(function()
+                                local requestFn = (syn and syn.request) or request or http_request or (http and http.request)
+                                if not requestFn then error("no http function") end
+                    
+                                local response = requestFn({ Url = url, Method = "GET" })
+                                if not (response and response.Body) then error("empty response") end
+                    
+                                if writefile then
+                                    pcall(writefile, FileName, response.Body)
+                                end
+                    
+                                local assetOk, asset = pcall(getcustomasset, FileName)
+                                if assetOk then
+                                    label.Image = asset
+                                else
+                                    warn("[NatHub] getcustomasset failed for: " .. url .. " → " .. tostring(asset))
+                                end
+                            end)
+                    
+                            if not ok then
+                                warn("[NatHub] ApplyImage failed: " .. tostring(err))
                             end
-
-                            return getcustomasset(path)
                         end)
-
-                        return (ok and result) or url
                     end
 
                     local newParagraph = Templates.Paragraph:Clone()
@@ -3613,7 +3631,8 @@ NatHub_MODULES[NatHub["3e"]] = {
                         thumb.BackgroundTransparency = 1
                         thumb.BorderSizePixel       = 0
                         thumb.Size                  = UDim2.new(1, 0, 0, size)
-                        thumb.Image                 = LoadImage(image)
+                        thumb.Image                 = ""
+                        ApplyImage(thumb, image)
                         thumb.ScaleType             = Enum.ScaleType.Crop
                         thumb.LayoutOrder           = -2
                         thumb.Parent                = newParagraph
@@ -3651,7 +3670,7 @@ NatHub_MODULES[NatHub["3e"]] = {
                         icon.BackgroundTransparency = 1
                         icon.BorderSizePixel        = 0
                         icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
-                        icon.Image                  = LoadImage(Paragraph.Image)
+                        ApplyImage(icon, Paragraph.Image)
                         icon.ScaleType              = Enum.ScaleType.Fit
                         if Paragraph.Color then
                             icon.ImageColor3 = Paragraph.Color
@@ -3932,10 +3951,56 @@ NatHub_MODULES[NatHub["3e"]] = {
 
                     function Paragraph:SetImage(img)
                         local row = newParagraph:FindFirstChild("TitleRow")
-                        if row then
-                            local ic = row:FindFirstChild("Icon")
-                            if ic then ic.Image = LoadImage(img) end
+                    
+                        if not row then
+                            newParagraph.Title.Visible = false
+                    
+                            row = Instance.new("Frame")
+                            row.Name                   = "TitleRow"
+                            row.BackgroundTransparency = 1
+                            row.BorderSizePixel        = 0
+                            row.Size                   = UDim2.new(1, 0, 0, Paragraph.ImageSize)
+                            row.AutomaticSize          = Enum.AutomaticSize.Y
+                            row.LayoutOrder            = -1
+                            row.Parent                 = newParagraph
+                    
+                            local rowLayout = Instance.new("UIListLayout")
+                            rowLayout.FillDirection     = Enum.FillDirection.Horizontal
+                            rowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+                            rowLayout.Padding           = UDim.new(0, 8)
+                            rowLayout.Parent            = row
+                    
+                            local icon = Instance.new("ImageLabel")
+                            icon.Name                   = "Icon"
+                            icon.BackgroundTransparency = 1
+                            icon.BorderSizePixel        = 0
+                            icon.Size                   = UDim2.new(0, Paragraph.ImageSize, 0, Paragraph.ImageSize)
+                            icon.Image                  = ""
+                            icon.ScaleType              = Enum.ScaleType.Fit
+                            if Paragraph.Color then icon.ImageColor3 = Paragraph.Color end
+                            icon.Parent                 = row
+                            local ic = Instance.new("UICorner")
+                            ic.CornerRadius = UDim.new(0, 4)
+                            ic.Parent = icon
+                    
+                            local titleLabel = Instance.new("TextLabel")
+                            titleLabel.Name                   = "TitleText"
+                            titleLabel.BackgroundTransparency = 1
+                            titleLabel.BorderSizePixel        = 0
+                            titleLabel.Size                   = UDim2.new(1, -(Paragraph.ImageSize + 8), 0, Paragraph.ImageSize)
+                            titleLabel.AutomaticSize          = Enum.AutomaticSize.Y
+                            titleLabel.Text                   = Paragraph.Title
+                            titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
+                            titleLabel.TextWrapped            = true
+                            titleLabel.RichText               = Paragraph.RichText
+                            titleLabel.TextSize               = 16
+                            titleLabel.TextColor3             = Color3.fromRGB(197, 204, 219)
+                            titleLabel.FontFace               = Font.new("rbxassetid://11702779517", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+                            titleLabel.Parent                 = row
                         end
+                    
+                        local ic = row:FindFirstChild("Icon")
+                        if ic then ApplyImage(ic, img) end
                     end
 
                     function Paragraph:SetThumbnail(img, size)
