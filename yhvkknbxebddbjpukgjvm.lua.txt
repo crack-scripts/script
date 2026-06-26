@@ -3257,48 +3257,95 @@ NatHub_MODULES[NatHub["3e"]] = {
 
 				local parentElement = newTab
 
-				function Tab:Section(data)
-					local Section = {
-						Title = data.Title,
-						State = data.Default or false,
-						TextXAlignment = data.TextXAlignment or "Left",
-					}
-
-					local newSection = Templates.Section:Clone()
-					newSection.Name = Section.Title
-					newSection.Button.Title.Text = Section.Title
-					newSection.Button.Title.TextXAlignment = Enum.TextXAlignment[Section.TextXAlignment]
-
-					newSection.Visible = true
-					newSection.Parent = newTab
-
-					newSection.Button.MouseButton1Click:Connect(function()
-						if Section.State == true then
-							-- close
-							newSection.Frame.Visible = false
-							Tween(newSection.Button.Title.Arrow, {Rotation = 0}, TweenConfigs.Global)
-							Section.State = false
-						elseif Section.State == false then
-							-- open
-							newSection.Frame.Visible = true
-							Tween(newSection.Button.Title.Arrow, {Rotation = 90}, TweenConfigs.Global)
-							Section.State = true
-						end
-					end)
-
-					function Section:SetTitle(newTitle)
-						Section.Title = newTitle
-						newSection.Button.Title.Text = newTitle
-					end
-
-					function Section:Destroy()
-						parentElement:Destroy()
-					end
-
-					parentElement = newSection.Frame
-
-					return Section
-				end
+                function Tab:Section(data)
+                    local Section = {
+                        Title  = data.Title,
+                        State  = data.Default or data.Opened or false,
+                        TextXAlignment = data.TextXAlignment or "Left",
+                    }
+                
+                    local newSection = Templates.Section:Clone()
+                    newSection.Name   = Section.Title
+                    newSection.Parent = parentElement   -- respects HStack / VStack routing
+                
+                    newSection.Button.Title.Text = Section.Title
+                    newSection.Button.Title.TextXAlignment = Enum.TextXAlignment[Section.TextXAlignment]
+                
+                    -- Initial collapsed / expanded state
+                    if Section.State then
+                        newSection.Frame.Visible = true
+                        newSection.Button.Title.Arrow.Rotation = 90
+                    else
+                        newSection.Frame.Visible = false
+                        newSection.Button.Title.Arrow.Rotation = 0
+                    end
+                
+                    -- Box background
+                    if data.Box then
+                        newSection.Frame.BackgroundColor3    = Color3.fromRGB(37, 40, 47)
+                        newSection.Frame.BackgroundTransparency = 0
+                    end
+                
+                    -- Box border
+                    if data.BoxBorder then
+                        local stroke = Instance.new("UIStroke")
+                        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                        stroke.Color            = Color3.fromRGB(61, 61, 75)
+                        stroke.Thickness        = 1.5
+                        stroke.Parent           = newSection.Frame
+                    end
+                
+                    newSection.Visible = true
+                
+                    newSection.Button.MouseButton1Click:Connect(function()
+                        if Section.State then
+                            newSection.Frame.Visible = false
+                            Tween(newSection.Button.Title.Arrow, {Rotation = 0},  TweenConfigs.Global)
+                            Section.State = false
+                        else
+                            newSection.Frame.Visible = true
+                            Tween(newSection.Button.Title.Arrow, {Rotation = 90}, TweenConfigs.Global)
+                            Section.State = true
+                        end
+                    end)
+                
+                    function Section:SetTitle(t)
+                        Section.Title = t
+                        newSection.Button.Title.Text = t
+                    end
+                
+                    function Section:Destroy()
+                        newSection:Destroy()
+                    end
+                
+                    -- ── Route element methods into the section's content frame ──────────────
+                    local sectionFrame = newSection.Frame
+                    local function route(fn, d)
+                        local saved = parentElement
+                        parentElement = sectionFrame
+                        local ok, result = pcall(fn, Tab, d)
+                        parentElement = saved
+                        if not ok then warn("[NatHub Section] route error: " .. tostring(result)) return end
+                        return result
+                    end
+                
+                    function Section:Button(d)    return route(Tab.Button,    d) end
+                    function Section:Toggle(d)    return route(Tab.Toggle,    d) end
+                    function Section:Slider(d)    return route(Tab.Slider,    d) end
+                    function Section:Input(d)     return route(Tab.Input,     d) end
+                    function Section:Dropdown(d)  return route(Tab.Dropdown,  d) end
+                    function Section:Paragraph(d) return route(Tab.Paragraph, d) end
+                    function Section:Code(d)      return route(Tab.Code,      d) end
+                    function Section:Divider()
+                        local div = Templates.Divider:Clone()
+                        div.Size    = UDim2.new(1, 0, 0, 1)
+                        div.Visible = true
+                        div.Parent  = sectionFrame
+                        return div
+                    end
+                
+                    return Section
+                end
 
 				function Tab:Button(data)
 					local Button = {}
