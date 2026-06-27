@@ -3585,18 +3585,14 @@ NatHub_MODULES[NatHub["3e"]] = {
                             local FileName = "NatHub/ImageCache/" .. tostring(hash) .. ".png"
 
                             if makefolder then pcall(makefolder, "NatHub/ImageCache") end
-                                local requestFn = (WindUI and WindUI.Creator and WindUI.Creator.Request)
-                                    or (syn and syn.request)
-                                    or http_request
+
+                            local ok, err = pcall(function()
+                                local requestFn = (syn and syn.request)
                                     or request
+                                    or http_request
                                     or (http and http.request)
                                 if not requestFn then error("no http function") end
-                                
-                                if not getcustomasset then
-                                    warn("[NatHub] getcustomasset not available — cannot load external image: " .. url)
-                                    return
-                                end
-                                
+
                                 if not (isfile and isfile(FileName)) then
                                     local response = requestFn({ Url = url, Method = "GET" })
                                     if not (response and response.Body) then error("empty response") end
