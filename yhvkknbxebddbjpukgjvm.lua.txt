@@ -3022,7 +3022,7 @@ NatHub_MODULES[NatHub["3e"]] = {
 			local function DropdownPopup(state, name)
 				-- disabled tween for popup cuz kills performance :<
 
-				if name and DropdownState == false then
+				if name and not DropdownState then
 					SelectedDropdown = name
 					for _,v in newWindow.DropdownSelection.Dropdowns:GetChildren() do
 						if v:IsA("Folder") then
